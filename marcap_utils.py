@@ -1,9 +1,25 @@
 # -*- coding: utf-8 -*-
 # marcap_utils.py - 시가총액 데이터를 위한 유틸함수
 
+import os
 from datetime import datetime
 import numpy as np
 import pandas as pd
+
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _data_dir():
+  # 저장소를 그대로 사용하는 경우: marcap_utils.py와 같은 위치의 data/
+  candidate = os.path.join(_THIS_DIR, 'data')
+  if os.path.isdir(candidate):
+    return candidate
+  # `git clone ... marcap` 후 상위 디렉토리에서 `from marcap import marcap_data`로 쓰는 경우
+  candidate = os.path.join(os.getcwd(), 'marcap', 'data')
+  if os.path.isdir(candidate):
+    return candidate
+  return os.path.join(_THIS_DIR, 'data')
+
 
 def marcap_data(start, end=None, code=None):
   '''
@@ -19,7 +35,7 @@ def marcap_data(start, end=None, code=None):
     
   for year in range(start.year, end.year + 1):
     try:
-      parquet_file = 'marcap/data/marcap-%s.parquet' % (year)
+      parquet_file = os.path.join(_data_dir(), 'marcap-%s.parquet' % (year))
       df = pd.read_parquet(parquet_file)
       # Date 컬럼이 인덱스가 아닌 경우 datetime으로 변환
       if 'Date' in df.columns:
