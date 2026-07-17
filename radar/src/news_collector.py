@@ -6,7 +6,6 @@
 """
 
 import os
-import re
 
 import requests
 
@@ -29,7 +28,11 @@ def _headers():
 
 
 def _strip_tags(text):
-    return re.sub(r'<[^>]+>', '', text or '').replace('&quot;', '"').replace('&amp;', '&')
+    # 네이버 뉴스 검색 API는 검색어 강조에 <b>/</b>만 사용한다(HTML 전반이 아님).
+    # 일반 정규식(<[^>]+>)은 본문에 등장하는 부등호(<, >)까지 태그로 오인해
+    # 그 사이 텍스트를 통째로 삭제할 수 있어, 알려진 태그만 명시적으로 제거한다.
+    text = (text or '').replace('<b>', '').replace('</b>', '')
+    return text.replace('&quot;', '"').replace('&amp;', '&')
 
 
 def get_recent_news(query, display=5, sort='date'):

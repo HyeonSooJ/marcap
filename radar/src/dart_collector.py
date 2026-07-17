@@ -19,8 +19,15 @@ _CACHE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'ou
 _CACHE_MAX_AGE_SEC = 7 * 24 * 3600
 
 
+DART_NO_DATA_STATUS = '013'  # 조회된 데이터가 없음 (정상적인 "공시 없음")
+
+
 class DartNotConfigured(RuntimeError):
     """DART_API_KEY 환경변수가 설정되지 않았을 때 발생."""
+
+
+class DartApiError(RuntimeError):
+    """DART_NO_DATA_STATUS 이외의 오류 상태코드가 반환됐을 때 발생 (키 만료, rate limit 등)."""
 
 
 def _api_key():
@@ -87,8 +94,11 @@ def get_disclosures(stock_code, bgn_de, end_de, page_count=20):
     }, timeout=30)
     resp.raise_for_status()
     data = resp.json()
-    if data.get('status') != '000':
+    status = data.get('status')
+    if status == DART_NO_DATA_STATUS:
         return pd.DataFrame(columns=['rcept_no', 'report_nm', 'rcept_dt', 'flr_nm'])
+    if status != '000':
+        raise DartApiError(f"DART API 오류 (status={status}): {data.get('message')}")
 
     items = data.get('list', [])
     df = pd.DataFrame(items)

@@ -36,7 +36,7 @@ with tab1:
         with st.spinner('marcap 데이터 로딩 및 이상탐지 실행 중...'):
             end = datetime.today()
             start = end - timedelta(days=int(lookback))
-            df = marcap_data(start, end)
+            df = marcap_data(start, end, include_halted=True)
             if df.empty:
                 st.warning('불러올 데이터가 없습니다.')
             else:

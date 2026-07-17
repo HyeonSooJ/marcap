@@ -25,7 +25,7 @@ def main():
     args = parser.parse_args()
 
     print(f'[1/3] marcap 데이터 로딩 중... ({args.start} ~ {args.end})')
-    df = marcap_data(args.start, args.end)
+    df = marcap_data(args.start, args.end, include_halted=True)
     print(f'  -> {len(df):,} rows, {df["Code"].nunique():,} codes')
 
     print('[2/3] 이상탐지 + 백테스트 실행 중... (몇 분 걸릴 수 있습니다)')

@@ -24,21 +24,22 @@ def _zscore(series, window=60, min_periods=20):
 def compute_features(df):
     """종목(Code)별로 정렬 후 롤링 z-score 피처를 계산해 붙인다.
 
+    groupby().transform()으로 종목별 롤링 계산을 벡터화한다(종목 수만큼 Python
+    루프를 도는 대신 pandas가 내부적으로 그룹별 계산을 수행).
+
     :param df: marcap_data()로 불러온 DataFrame (DatetimeIndex, Code/Volume/
         ChangesRatio/Marcap/Rank 컬럼 포함)
     :return: 피처가 추가된 DataFrame
     """
-    parts = []
-    for code, g in df.groupby('Code', sort=False):
-        g = g.sort_index().copy()
-        g['VolumeZ'] = _zscore(g['Volume'])
-        g['ChangesRatioZ'] = _zscore(g['ChangesRatio'].abs())
-        g['MarcapReturn'] = g['Marcap'].pct_change()
-        g['MarcapReturnZ'] = _zscore(g['MarcapReturn'])
-        g['RankChange'] = g['Rank'].diff().abs()
-        g['RankChangeZ'] = _zscore(g['RankChange'])
-        parts.append(g)
-    return pd.concat(parts).sort_index()
+    df = df.sort_index().copy()
+    grouped = df.groupby('Code', sort=False)
+    df['VolumeZ'] = grouped['Volume'].transform(_zscore)
+    df['ChangesRatioZ'] = grouped['ChangesRatio'].transform(lambda s: _zscore(s.abs()))
+    df['MarcapReturn'] = grouped['Marcap'].pct_change()
+    df['MarcapReturnZ'] = df.groupby('Code', sort=False)['MarcapReturn'].transform(_zscore)
+    df['RankChange'] = grouped['Rank'].diff().abs()
+    df['RankChangeZ'] = df.groupby('Code', sort=False)['RankChange'].transform(_zscore)
+    return df
 
 
 def score_anomaly(df):

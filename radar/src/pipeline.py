@@ -15,6 +15,8 @@ import os
 import sys
 from datetime import datetime, timedelta
 
+import pandas as pd
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -23,6 +25,18 @@ from src import dart_collector, news_collector, llm_report  # noqa: E402
 from marcap_utils import marcap_data  # noqa: E402
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'output', 'reports')
+
+
+def _dept_display(dept):
+    """marcap Dept 값을 표시용 문자열로 변환한다.
+
+    연도별 parquet 파일마다 무분류 값이 실제 NaN(float)이거나 문자열 'nan'으로
+    섞여 있어, 두 경우 모두 '-'로 정규화한다.
+    """
+    if dept is None or (isinstance(dept, float) and pd.isna(dept)):
+        return '-'
+    text = str(dept).strip()
+    return '-' if text.lower() in ('', 'nan', 'none') else text
 
 
 def _has_dart():
@@ -42,10 +56,11 @@ def run(date=None, lookback_days=90, threshold=3.0, top_n=10):
     start = target_date - timedelta(days=lookback_days)
 
     print(f'[1/3] marcap 데이터 로딩 ({start.date()} ~ {target_date.date()})')
-    df = marcap_data(start, target_date)
+    df = marcap_data(start, target_date, include_halted=True)
     if df.empty:
         print('데이터가 없습니다. (휴장일이거나 아직 업데이트되지 않았을 수 있습니다)')
         return None
+    report_date = df.index.max().date()
 
     print('[2/3] 이상탐지 실행')
     anomalies = detect_anomalies(df, date=None, threshold=threshold, top_n=top_n)
@@ -59,7 +74,7 @@ def run(date=None, lookback_days=90, threshold=3.0, top_n=10):
         section.append(
             f"- 이상점수: **{row['AnomalyScore']:.2f}** (주요 원인 지표: `{row['AnomalyReason']}`)\n"
             f"- 종가: {row['Close']} / 등락률: {row['ChangesRatio']}% / 거래량: {row['Volume']:,.0f}\n"
-            f"- 시가총액순위: {row['Rank']} / 소속부: {row['Dept'] if row['Dept'] else '-'}"
+            f"- 시가총액순위: {row['Rank']} / 소속부: {_dept_display(row['Dept'])}"
         )
 
         disclosures, news_items = None, None
@@ -80,7 +95,7 @@ def run(date=None, lookback_days=90, threshold=3.0, top_n=10):
         if _has_llm():
             try:
                 row_dict = row.to_dict()
-                row_dict['Date'] = target_date.date().isoformat()
+                row_dict['Date'] = report_date.isoformat()
                 report_text = llm_report.generate_report(row_dict, disclosures, news_items)
                 section.append('')
                 section.append(report_text)
@@ -92,7 +107,6 @@ def run(date=None, lookback_days=90, threshold=3.0, top_n=10):
 
         sections.append('\n'.join(section))
 
-    report_date = df.index.max().date()
     header = f"# 마캡레이더 데일리 리스크 브리핑 — {report_date}\n"
     body = '\n\n---\n\n'.join(sections) if sections else '_오늘 임계값을 초과한 이상신호 종목이 없습니다._'
     full_report = f'{header}\n{body}\n'
