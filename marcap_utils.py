@@ -1,25 +1,48 @@
 # -*- coding: utf-8 -*-
 # marcap_utils.py - 시가총액 데이터를 위한 유틸함수
 
+import glob
+import os
 from datetime import datetime
 import numpy as np
 import pandas as pd
 
-def marcap_data(start, end=None, code=None):
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _data_dir():
+  # 저장소를 그대로 사용하는 경우: marcap_utils.py와 같은 위치의 data/
+  # `git clone ... marcap` 후 상위 디렉토리에서 `from marcap import marcap_data`로 쓰는 경우도 지원
+  candidates = [
+    os.path.join(_THIS_DIR, 'data'),
+    os.path.join(os.getcwd(), 'marcap', 'data'),
+  ]
+  for candidate in candidates:
+    if os.path.isdir(candidate) and glob.glob(os.path.join(candidate, 'marcap-*.parquet')):
+      return candidate
+  raise FileNotFoundError(
+    'marcap 데이터 디렉토리를 찾을 수 없습니다. 다음 경로를 확인했습니다: ' + ', '.join(candidates)
+  )
+
+
+def marcap_data(start, end=None, code=None, include_halted=False):
   '''
   지정한 기간 데이터 가져오기
   :param datetime start: 시작일
   :param datetime end: 종료일 (지정하지 않으면 시작일과 동일)
   :param str code: 종목코드 (지정하지 않으면 모든 종목)
+  :param bool include_halted: True이면 거래정지(Volume=0) 종목/일자도 포함
+      (기본값 False는 기존 동작과 동일하게 Volume>0인 행만 반환)
   :return: DataFrame
   '''
   start = pd.to_datetime(start)
   end = start if end==None else pd.to_datetime(end)
+  data_dir = _data_dir()
   df_list = []
-    
+
   for year in range(start.year, end.year + 1):
     try:
-      parquet_file = 'marcap/data/marcap-%s.parquet' % (year)
+      parquet_file = os.path.join(data_dir, 'marcap-%s.parquet' % (year))
       df = pd.read_parquet(parquet_file)
       # Date 컬럼이 인덱스가 아닌 경우 datetime으로 변환
       if 'Date' in df.columns:
@@ -29,11 +52,13 @@ def marcap_data(start, end=None, code=None):
       print(e)
       pass
   df_merged = pd.concat(df_list)
-  df_merged = df_merged[(start <= df_merged['Date']) & (df_merged['Date'] <= end)]  
+  df_merged = df_merged[(start <= df_merged['Date']) & (df_merged['Date'] <= end)]
   df_merged = df_merged.sort_values(['Date','Rank'])
   if code:
-    df_merged = df_merged[code == df_merged['Code']]  
+    df_merged = df_merged[code == df_merged['Code']]
   df_merged.set_index('Date', inplace=True)
+  if include_halted:
+    return df_merged
   return df_merged[df_merged['Volume'] > 0]
 
 
