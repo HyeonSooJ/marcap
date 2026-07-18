@@ -83,6 +83,7 @@
             repo: 'marcap',
             branch: 'master',
             path: 'data/mock-investment-data.json',
+            leaderboardPath: 'LEADERBOARD.md', // 그룹/참가자/수익률을 표로 보여주는 자동 생성 파일
             token: 'YOUR_GITHUB_FINE_GRAINED_TOKEN' // TODO: 발급받은 토큰으로 교체하세요
         };
 
@@ -100,30 +101,33 @@
         function b64DecodeUnicode(str) {
             return decodeURIComponent(atob(str).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
         }
-        function ghUrl() {
-            return `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`;
+        function ghUrl(path) {
+            return `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${path}`;
         }
         function ghHeaders(extra) {
             return Object.assign({ 'Authorization': `Bearer ${GITHUB_CONFIG.token}`, 'Accept': 'application/vnd.github+json' }, extra || {});
         }
-        async function ghReadData() {
-            const res = await fetch(`${ghUrl()}?ref=${GITHUB_CONFIG.branch}&_=${Date.now()}`, { headers: ghHeaders() });
-            if (res.status === 404) return { sha: null, data: { groups: [], participants: [] } };
+        async function ghReadFile(path) {
+            const res = await fetch(`${ghUrl(path)}?ref=${GITHUB_CONFIG.branch}&_=${Date.now()}`, { headers: ghHeaders() });
+            if (res.status === 404) return { sha: null, text: null };
             if (!res.ok) throw new Error(`GitHub 읽기 실패 (${res.status})`);
             const json = await res.json();
-            const content = b64DecodeUnicode(json.content.replace(/\n/g, ''));
-            const data = JSON.parse(content || '{}');
-            if (!data.groups) data.groups = [];
-            if (!data.participants) data.participants = [];
-            return { sha: json.sha, data };
+            return { sha: json.sha, text: b64DecodeUnicode(json.content.replace(/\n/g, '')) };
         }
-        async function ghWriteData(data, sha, message) {
-            const body = { message, content: b64EncodeUnicode(JSON.stringify(data, null, 2)), branch: GITHUB_CONFIG.branch };
+        async function ghWriteFile(path, text, sha, message) {
+            const body = { message, content: b64EncodeUnicode(text), branch: GITHUB_CONFIG.branch };
             if (sha) body.sha = sha;
-            const res = await fetch(ghUrl(), { method: 'PUT', headers: ghHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
+            const res = await fetch(ghUrl(path), { method: 'PUT', headers: ghHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body) });
             if (res.status === 409) { const e = new Error('CONFLICT'); e.conflict = true; throw e; }
             if (!res.ok) throw new Error(`GitHub 저장 실패 (${res.status})`);
             return res.json();
+        }
+        async function ghReadData() {
+            const { sha, text } = await ghReadFile(GITHUB_CONFIG.path);
+            const data = JSON.parse(text || '{}');
+            if (!data.groups) data.groups = [];
+            if (!data.participants) data.participants = [];
+            return { sha, data };
         }
         // 동시 편집 충돌(409) 시 최신본을 다시 읽어 재시도합니다.
         async function ghMutate(mutator, message) {
@@ -131,7 +135,8 @@
                 const { sha, data } = await ghReadData();
                 mutator(data);
                 try {
-                    await ghWriteData(data, sha, message);
+                    await ghWriteFile(GITHUB_CONFIG.path, JSON.stringify(data, null, 2), sha, message);
+                    await syncLeaderboardMarkdown(data);
                     return data;
                 } catch (e) {
                     if (e.conflict) { await new Promise(r => setTimeout(r, 300 + Math.random() * 400)); continue; }
@@ -142,6 +147,39 @@
         }
         function uid() {
             return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+        }
+
+        // groups/participants 데이터를 GitHub 저장소 메인에서 바로 읽을 수 있는 표(Markdown)로 만들어 커밋합니다.
+        function buildLeaderboardMarkdown(data) {
+            const byGroup = {};
+            data.groups.forEach(g => { byGroup[g.name] = []; });
+            data.participants.forEach(p => { (byGroup[p.group] || (byGroup[p.group] = [])).push(p); });
+            const groupNames = Object.keys(byGroup).sort((a, b) => a.localeCompare(b));
+            const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+            let md = `# 모의투자 대회 리더보드\n\n_마지막 업데이트: ${now} (KST)_\n\n`;
+            if (groupNames.length === 0) { md += '아직 생성된 그룹이 없습니다.\n'; return md; }
+            groupNames.forEach(name => {
+                const list = [...byGroup[name]].sort((a, b) => (b.profit || 0) - (a.profit || 0));
+                md += `## ${name} (${list.length}명)\n\n`;
+                if (list.length === 0) { md += '참가자가 없습니다.\n\n'; return; }
+                md += '| 순위 | 닉네임 | 수익률 |\n|---|---|---|\n';
+                list.forEach((p, i) => { md += `| ${i + 1} | ${p.nickname} | ${(p.profit || 0).toFixed(2)}% |\n`; });
+                md += '\n';
+            });
+            return md;
+        }
+        async function syncLeaderboardMarkdown(data) {
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const { sha } = await ghReadFile(GITHUB_CONFIG.leaderboardPath);
+                    await ghWriteFile(GITHUB_CONFIG.leaderboardPath, buildLeaderboardMarkdown(data), sha, 'update leaderboard');
+                    return;
+                } catch (e) {
+                    if (e.conflict) { await new Promise(r => setTimeout(r, 300 + Math.random() * 400)); continue; }
+                    console.error('리더보드 갱신 실패', e);
+                    return;
+                }
+            }
         }
 
         function handleNickname() { const n = document.getElementById('nickname').value; if(!n) return alert("닉네임 필수!"); state.nick = n; alert("한 번 입력하면 수정이 불가능합니다 ! 수정을 원하시면 새로고침을 눌러주세요 !"); document.getElementById('status-msg').innerText = `${n} 님 화이팅!!`; document.getElementById('nickname').disabled = true; document.getElementById('nick-btn').style.display = 'none'; }
