@@ -32,26 +32,47 @@ st.caption('marcap 일별 시가총액/주가/거래량 데이터를 통계적�
 tab1, tab2, tab3, tab4 = st.tabs(['오늘의 이상신호', '데일리 리포트', '백테스트 결과', '밈스탁 확산 진단 + 맞춤 경고'])
 
 with tab1:
+    st.markdown(
+        '**롤링 윈도우**: "오늘 값이 평소와 다른가"를 판단할 때 기준으로 삼는 과거 기간이에요. '
+        '예를 들어 90일이면, 최근 90일간의 흐름과 비교해서 오늘 값이 튀는지를 봅니다. '
+        '아래 조회 기간의 시작~종료 날짜 사이가 이 기간이 됩니다.  \n'
+        '**이상신호 임계값(z-score)**: 오늘 값이 평소 흐름에서 표준편차 몇 배만큼 벗어났는지를 '
+        '나타내는 기준선이에요. 값이 클수록(예: 5.0) 아주 극단적인 경우만 잡아내고, '
+        '작을수록(예: 2.0) 더 많이 잡히지만 평범한 변동까지 오탐할 위험이 커집니다.'
+    )
+
     col1, col2, col3 = st.columns(3)
-    lookback = col1.number_input('롤링 윈도우(일)', min_value=30, max_value=365, value=90, step=10)
-    threshold = col2.number_input('이상신호 임계값(z-score)', min_value=1.0, max_value=6.0, value=3.0, step=0.5)
+    _default_end = datetime.today().date()
+    _default_start = _default_end - timedelta(days=90)
+    date_range = col1.date_input(
+        '조회 기간 (시작일 ~ 기준일)',
+        value=(_default_start, _default_end),
+        max_value=_default_end,
+        help='끝 날짜가 분석 기준일이 되고, 시작~끝 날짜 사이 데이터로 "평소" 흐름(롤링 윈도우)을 계산합니다.',
+    )
+    threshold = col2.number_input(
+        '이상신호 임계값(z-score)', min_value=1.0, max_value=6.0, value=3.0, step=0.5,
+        help='표준편차 몇 배만큼 벗어나야 "이상신호"로 볼지 정하는 값. 기본 3.0 = 통계적으로 1000번 중 1~3번 정도만 일어나는 수준.',
+    )
     top_n = col3.number_input('표시 종목 수', min_value=5, max_value=50, value=10, step=5)
 
     if st.button('스캔 실행', type='primary'):
-        with st.spinner('marcap 데이터 로딩 및 이상탐지 실행 중...'):
-            end = datetime.today()
-            start = end - timedelta(days=int(lookback))
-            df = marcap_data(start, end, include_halted=True)
-            if df.empty:
-                st.warning('불러올 데이터가 없습니다.')
-            else:
-                result = detect_anomalies(df, threshold=threshold, top_n=int(top_n))
-                st.success(f'{df.index.max().date()} 기준 {len(result)}개 종목 플래그')
-                st.dataframe(
-                    result[['Code', 'Name', 'Close', 'ChangesRatio', 'Volume', 'Rank', 'Dept',
-                            'AnomalyScore', 'AnomalyReason']],
-                    use_container_width=True,
-                )
+        if not (isinstance(date_range, (tuple, list)) and len(date_range) == 2):
+            st.warning('시작일과 종료일을 모두 선택해주세요.')
+        else:
+            start, end = date_range
+            with st.spinner('marcap 데이터 로딩 및 이상탐지 실행 중...'):
+                df = marcap_data(start, end, include_halted=True)
+                if df.empty:
+                    st.warning('불러올 데이터가 없습니다.')
+                else:
+                    result = detect_anomalies(df, threshold=threshold, top_n=int(top_n))
+                    st.success(f'{df.index.max().date()} 기준 {len(result)}개 종목 플래그')
+                    st.dataframe(
+                        result[['Code', 'Name', 'Close', 'ChangesRatio', 'Volume', 'Rank', 'Dept',
+                                'AnomalyScore', 'AnomalyReason']],
+                        use_container_width=True,
+                    )
 
 with tab2:
     report_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'output', 'reports')
@@ -89,19 +110,35 @@ with tab4:
         '결합해 개인화된 주의 메시지를 만듭니다. 특정 종목의 매수·매도를 추천하지 않습니다.'
     )
 
+    st.markdown(
+        '**조회 기간**: 시작~종료 날짜 사이 데이터를 "평소" 흐름 비교 기준으로 삼습니다. '
+        '기간이 너무 짧으면 비교 기준이 부족해 진단이 불안정해질 수 있어요.  \n'
+        '**1차 이상신호 임계값(z-score)**: "오늘의 이상신호" 탭과 같은 개념이에요 — 이 값을 넘는 '
+        '종목만 2단계 확산 진단(검색량 API 호출)까지 진행해서 비용과 오탐을 줄입니다.'
+    )
+
     col1, col2 = st.columns(2)
-    diff_lookback = col1.number_input(
-        '조회 기간(일)', min_value=30, max_value=365, value=120, step=10, key='diff_lookback',
+    _diff_default_end = datetime.today().date()
+    _diff_default_start = _diff_default_end - timedelta(days=120)
+    diff_date_range = col1.date_input(
+        '조회 기간 (시작일 ~ 기준일)',
+        value=(_diff_default_start, _diff_default_end),
+        max_value=_diff_default_end,
+        key='diff_date_range',
+        help='끝 날짜가 분석 기준일이 됩니다. 검색량/뉴스 데이터도 이 기간에 맞춰 조회됩니다.',
     )
     diff_threshold = col2.number_input(
         '1차 이상신호 임계값(z-score)', min_value=1.0, max_value=6.0, value=3.0, step=0.5, key='diff_threshold',
+        help='표준편차 몇 배만큼 벗어나야 1차 스크리닝을 통과시킬지 정하는 값 (기본 3.0).',
     )
 
     if st.button('확산 진단 스캔 실행'):
+        if not (isinstance(diff_date_range, (tuple, list)) and len(diff_date_range) == 2):
+            st.warning('시작일과 종료일을 모두 선택해주세요.')
+            st.stop()
+        start, end = diff_date_range
         with st.spinner('marcap 데이터 로딩 + 이상탐지 + 확산 진단 실행 중 '
                          '(검색량 API 호출 포함, 다소 시간이 걸릴 수 있습니다)...'):
-            end = datetime.today()
-            start = end - timedelta(days=int(diff_lookback))
             df = marcap_data(start, end, include_halted=True)
             if df.empty:
                 st.warning('불러올 데이터가 없습니다.')
