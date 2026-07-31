@@ -21,6 +21,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from src.anomaly_detector import detect_anomalies  # noqa: E402
+from src.diffusion_model import diagnose_flagged_stocks  # noqa: E402
 from src import dart_collector, news_collector, llm_report  # noqa: E402
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -63,7 +64,12 @@ def run(date=None, lookback_days=90, threshold=3.0, top_n=10):
     report_date = df.index.max().date()
 
     print('[2/3] 이상탐지 실행')
-    anomalies = detect_anomalies(df, date=None, threshold=threshold, top_n=top_n)
+    if _has_naver():
+        # 검색량 API(데이터랩)가 news_collector와 자격증명을 공유하므로, 뉴스 키가
+        # 있으면 이상탐지 통과 종목에 한해 SIR 확산 단계까지 함께 진단한다.
+        anomalies = diagnose_flagged_stocks(df, date=None, threshold=threshold, top_n=top_n)
+    else:
+        anomalies = detect_anomalies(df, date=None, threshold=threshold, top_n=top_n)
     print(f'  -> {len(anomalies)}개 종목 플래그')
 
     print('[3/3] 종목별 컨텍스트 수집 + 리포트 생성')
@@ -76,6 +82,13 @@ def run(date=None, lookback_days=90, threshold=3.0, top_n=10):
             f"- 종가: {row['Close']} / 등락률: {row['ChangesRatio']}% / 거래량: {row['Volume']:,.0f}\n"
             f"- 시가총액순위: {row['Rank']} / 소속부: {_dept_display(row['Dept'])}"
         )
+        stage = row.get('Stage')
+        if stage is not None and pd.notna(stage):
+            section.append(
+                f"- 확산 진단(SIR 근사): **{stage}** (실효재생산수 Rt≈{row['Rt']:.2f}, "
+                f"관심도 지수 {row['Attention']:.2f}) — 재무·신용 지표가 아닌 시장 관심 확산 속도 기반 "
+                '보조 지표, 참고용'
+            )
 
         disclosures, news_items = None, None
         if _has_dart():

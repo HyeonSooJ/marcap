@@ -2,24 +2,33 @@
 
 marcap 일별 시가총액/주가/거래량 데이터를 이용해 상장기업의 이상변동을 조기에
 탐지하고, DART 공시·뉴스와 결합한 LLM(Claude)이 원인을 설명해주는 리스크 모니터링
-서비스입니다. KODATA·BDAI 공모전 출품작입니다. 자세한 배경과 근거는
-[`proposal/제안서.md`](proposal/제안서.md) 참고.
+서비스입니다. KODATA·BDAI 공모전 출품작(1차 버전)이며, 이를 확장해 KB AI 챌린지용으로
+"밈스탁 버블 확산 조기경보"(감염병 확산모델 기반 SIR 진단 + 투자 성향 개인화) 기능을
+추가했습니다. 배경과 근거는 [`proposal/제안서.md`](proposal/제안서.md)(1차 버전),
+[`proposal/KB_AI_챌린지_제안서.md`](proposal/KB_AI_챌린지_제안서.md)(확장판), 진행
+경과는 [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md) 참고.
 
 ## 구성
 
 ```
 radar/
 ├── src/
-│   ├── anomaly_detector.py   # 통계 기반 이상탐지 + 백테스트
-│   ├── dart_collector.py     # OpenDART 공시 목록 수집
-│   ├── news_collector.py     # 네이버 뉴스 검색
-│   ├── llm_report.py         # Claude 기반 원인 해설 리포트 생성
-│   └── pipeline.py           # 전체 파이프라인 오케스트레이션
+│   ├── anomaly_detector.py       # 통계 기반 이상탐지 + 백테스트
+│   ├── dart_collector.py         # OpenDART 공시 목록 수집
+│   ├── news_collector.py         # 네이버 뉴스 검색 + 언급량 스냅샷
+│   ├── search_trend_collector.py # 네이버 데이터랩 검색량 (로컬 캐싱)
+│   ├── diffusion_model.py        # SIR 역학모델 기반 관심 확산 진단(Rt, 4단계)
+│   ├── investor_profile.py       # 투자 성향 설문 태깅(A-lite) + 규칙 기반 대체 문구
+│   ├── llm_report.py             # Claude 기반 원인 해설 + 개인화 경고 생성
+│   └── pipeline.py               # 전체 파이프라인 오케스트레이션
 ├── scripts/
-│   └── backtest.py           # 조기경보 성능 백테스트 CLI
-├── app.py                    # Streamlit 데모 대시보드
-├── proposal/제안서.md         # 공모전 제안서
-└── output/                   # 생성된 리포트/백테스트 결과 (reports/*.md, backtest_result.csv)
+│   ├── backtest.py               # 조기경보 성능 백테스트 CLI
+│   └── backtest_diffusion.py     # SIR 확산 진단 예측력 백테스트 CLI
+├── app.py                        # Streamlit 데모 대시보드 (4개 탭)
+├── proposal/
+│   ├── 제안서.md                  # KODATA·BDAI 공모전 제안서 (1차 버전)
+│   └── KB_AI_챌린지_제안서.md     # KB AI 챌린지 제안서 (확산 진단·개인화 확장판)
+└── output/                       # 생성된 리포트/백테스트 결과
 ```
 
 ## 설치
@@ -51,6 +60,9 @@ set -a && source radar/.env && set +a
 ```bash
 # 조기경보 성능 백테스트 (marcap 데이터만으로 실행 가능, API 키 불필요)
 python radar/scripts/backtest.py --start 2022-01-01 --end 2026-07-01
+
+# SIR 확산 진단 예측력 백테스트 (네이버 데이터랩 검색량 API 키 필요)
+python radar/scripts/backtest_diffusion.py --start 2023-01-01 --end 2024-12-31 --top-n 5
 
 # 오늘자 데일리 리포트 생성
 python radar/src/pipeline.py
