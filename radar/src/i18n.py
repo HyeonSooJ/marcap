@@ -153,6 +153,19 @@ TRANSLATIONS = {
     'lang_picker_label': {'ko': '언어 / Language', 'en': 'Language / 언어'},
 }
 
+REASON_LABELS = {
+    'VolumeZ': {'ko': '거래량 급변', 'en': 'Volume Spike'},
+    'ChangesRatioZ': {'ko': '등락률 급변', 'en': 'Price Change Spike'},
+    'MarcapReturnZ': {'ko': '시가총액 급변', 'en': 'Market Cap Change Spike'},
+    'RankChangeZ': {'ko': '시총순위 급변', 'en': 'Cap Rank Change Spike'},
+}
+
+
+def reason_label(val, lang):
+    """AnomalyReason 컬럼 값(VolumeZ 등)을 표시용 라벨로 바꾼다 (매핑에 없으면 원래 값 유지)."""
+    return REASON_LABELS.get(val, {}).get(lang, val)
+
+
 COLUMN_LABELS = {
     'Code': {'ko': '종목코드', 'en': 'Code'},
     'Name': {'ko': '종목명', 'en': 'Name'},

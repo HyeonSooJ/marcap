@@ -22,7 +22,7 @@ from src.investor_profile import (  # noqa: E402
     classify_profile, build_fallback_alert,
 )
 from src.llm_report import generate_personalized_alert  # noqa: E402
-from src.i18n import t, col_label  # noqa: E402
+from src.i18n import t, col_label, reason_label  # noqa: E402
 from marcap_utils import marcap_data  # noqa: E402
 
 if 'lang' not in st.session_state:
@@ -84,6 +84,9 @@ with tab1:
                     show_cols = ['Code', 'Name', 'Close', 'ChangesRatio', 'Volume', 'Rank', 'Dept',
                                  'AnomalyScore', 'AnomalyReason']
                     display_result = result[show_cols].copy()
+                    display_result['AnomalyReason'] = display_result['AnomalyReason'].map(
+                        lambda v: reason_label(v, lang),
+                    )
                     # marcap은 일별(장 마감 기준) 데이터라 시:분:초 정보가 없다. DatetimeIndex를
                     # 그대로 보여주면 의미 없는 "00:00:00"이 붙어 나오므로 날짜만 표시한다.
                     display_result.index = display_result.index.strftime('%Y-%m-%d')
@@ -169,6 +172,7 @@ with tab4:
         show_cols = ['Code', 'Name', 'Close', 'ChangesRatio', 'AnomalyScore', 'AnomalyReason',
                      'Attention', 'Rt', 'Stage']
         display_diag = diag[show_cols].copy()
+        display_diag['AnomalyReason'] = display_diag['AnomalyReason'].map(lambda v: reason_label(v, lang))
         if lang == 'en':
             display_diag['Stage'] = display_diag['Stage'].map(
                 lambda s: STAGE_LABELS.get(s, {}).get('en', s) if pd.notna(s) else s,
