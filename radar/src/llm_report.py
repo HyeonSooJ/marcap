@@ -8,6 +8,8 @@ pipeline.py에서 스코프를 제한한다.
 
 import os
 
+from .investor_profile import PROFILE_LABELS, STAGE_LABELS  # noqa: E402  (프롬프트 표시 라벨 재사용)
+
 REPORT_MODEL = os.environ.get('RADAR_LLM_MODEL', 'claude-sonnet-5')
 
 
@@ -91,7 +93,8 @@ def generate_report(anomaly_row, disclosures=None, news_items=None, client=None)
     return _extract_text(message)
 
 
-PERSONALIZED_SYSTEM_PROMPT = """\
+PERSONALIZED_SYSTEM_PROMPT = {
+    'ko': """\
 당신은 개인투자자에게 리스크를 설명해주는 금융 코치입니다.
 아래 "종목의 시장 관심 확산 진단 결과"와 "사용자의 투자 성향"을 결합해서, 왜 지금
 이 사용자에게 이 종목이 특히 주의가 필요할 수 있는지(또는 상대적으로 덜 위험한지)
@@ -106,41 +109,75 @@ PERSONALIZED_SYSTEM_PROMPT = """\
 - 사용자의 투자 성향 특징과 현재 확산 단계를 구체적으로 연결해서 설명하세요
   (일반론이 아니라 "당신은 X한 경향이 있는데, 지금 이 종목은 Y 단계라서..." 식으로).
 - 출력은 3~4문장의 짧은 한국어 문단 하나로만 작성하세요. 제목이나 목록 없이.
-"""
+""",
+    'en': """\
+You are a financial coach who explains risk to individual investors.
+Combine the "stock's market-attention diffusion diagnosis" below with the "user's \
+investor profile" to explain why this stock may need particular caution for this \
+user right now (or why it may be relatively lower-risk for them).
+
+Rules:
+- Do not instruct the user to buy or sell any specific stock. This is risk \
+  information, not a trading recommendation.
+- The diffusion-stage diagnosis (an approximation applying an SIR epidemic model to \
+  market attention) is not ground truth but a supplementary signal — use hedged \
+  language like "may" or "could".
+- Concretely connect the user's profile traits to the current diffusion stage \
+  (not generic advice — e.g. "You tend to X, and this stock is currently in stage Y, so...").
+- Output a single short paragraph of 3-4 sentences in English. No headings or lists.
+""",
+}
 
 
-def _build_personalized_prompt(diffusion_summary, profile_key, profile_description):
+def _build_personalized_prompt(diffusion_summary, profile_key, profile_description, lang):
+    stage = diffusion_summary.get('Stage')
+    stage_label = STAGE_LABELS.get(stage, {}).get(lang, stage)
+    profile_label = PROFILE_LABELS.get(profile_key, {}).get(lang, profile_key)
+
+    if lang == 'en':
+        return (
+            '### Stock diffusion diagnosis\n'
+            f"- Stock: {diffusion_summary.get('Name')} ({diffusion_summary.get('Code')})\n"
+            f"- Diagnosis date: {diffusion_summary.get('Date')}\n"
+            f'- Diffusion stage: {stage_label}\n'
+            f"- Estimated effective reproduction number (Rt): {diffusion_summary.get('Rt'):.2f}\n"
+            f"- Attention index (0-1): {diffusion_summary.get('Attention'):.2f}\n\n"
+            f'### User investor profile: {profile_label}\n'
+            f'- Traits: {profile_description}\n'
+        )
     return (
         '### 종목 확산 진단\n'
         f"- 종목: {diffusion_summary.get('Name')} ({diffusion_summary.get('Code')})\n"
         f"- 진단일: {diffusion_summary.get('Date')}\n"
-        f"- 확산 단계: {diffusion_summary.get('Stage')}\n"
+        f'- 확산 단계: {stage_label}\n'
         f"- 실효재생산수(Rt) 추정치: {diffusion_summary.get('Rt'):.2f}\n"
         f"- 관심도 지수(0~1): {diffusion_summary.get('Attention'):.2f}\n\n"
-        f'### 사용자 투자 성향: {profile_key}\n'
+        f'### 사용자 투자 성향: {profile_label}\n'
         f'- 특징: {profile_description}\n'
     )
 
 
-def generate_personalized_alert(diffusion_summary, profile_key, profile_description, client=None):
+def generate_personalized_alert(diffusion_summary, profile_key, profile_description, client=None, lang='ko'):
     """확산 진단 결과 + 투자 성향을 결합한 개인화 경고 메시지를 생성한다.
 
     :param diffusion_summary: diffusion_model.diagnose()가 반환하는 요약 dict
         (Code, Name, Date, Attention, GrowthRate, Rt, Stage)
-    :param profile_key: investor_profile.classify_profile()이 반환한 유형 문자열
-    :param profile_description: investor_profile.PROFILE_DESCRIPTIONS[profile_key]
+    :param profile_key: investor_profile.classify_profile()이 반환한 유형 문자열(내부 키,
+        언어 무관 — 표시용 라벨은 이 함수 내부에서 lang에 맞게 변환됨)
+    :param profile_description: investor_profile.PROFILE_DESCRIPTIONS[profile_key][lang]
     :param client: anthropic.Anthropic 인스턴스 (미지정 시 자동 생성)
+    :param lang: 'ko' 또는 'en' — 시스템 프롬프트와 출력 언어를 결정
     :return: 마크다운(짧은 문단) 문자열
     """
     if client is None:
         import anthropic
         client = anthropic.Anthropic()
 
-    user_prompt = _build_personalized_prompt(diffusion_summary, profile_key, profile_description)
+    user_prompt = _build_personalized_prompt(diffusion_summary, profile_key, profile_description, lang)
     message = client.messages.create(
         model=REPORT_MODEL,
         max_tokens=400,
-        system=PERSONALIZED_SYSTEM_PROMPT,
+        system=PERSONALIZED_SYSTEM_PROMPT[lang],
         messages=[{'role': 'user', 'content': user_prompt}],
     )
     return _extract_text(message)
