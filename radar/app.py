@@ -68,9 +68,14 @@ with tab1:
                 else:
                     result = detect_anomalies(df, threshold=threshold, top_n=int(top_n))
                     st.success(f'{df.index.max().date()} 기준 {len(result)}개 종목 플래그')
+                    display_result = result[['Code', 'Name', 'Close', 'ChangesRatio', 'Volume', 'Rank', 'Dept',
+                                              'AnomalyScore', 'AnomalyReason']].copy()
+                    # marcap은 일별(장 마감 기준) 데이터라 시:분:초 정보가 없다. DatetimeIndex를
+                    # 그대로 보여주면 의미 없는 "00:00:00"이 붙어 나오므로 날짜만 표시한다.
+                    display_result.index = display_result.index.strftime('%Y-%m-%d')
+                    display_result.index.name = '날짜'
                     st.dataframe(
-                        result[['Code', 'Name', 'Close', 'ChangesRatio', 'Volume', 'Rank', 'Dept',
-                                'AnomalyScore', 'AnomalyReason']],
+                        display_result,
                         use_container_width=True,
                     )
 
