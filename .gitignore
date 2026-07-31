@@ -21,3 +21,7 @@ Thumbs.db
 venv/
 env/
 
+# API 응답 로컬 캐시 (재조회로 언제든 재생성 가능)
+radar/output/search_trend_cache/
+radar/output/dart_corp_code.parquet
+

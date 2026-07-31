@@ -57,3 +57,19 @@ def get_recent_news(query, display=5, sort='date'):
         }
         for it in items
     ]
+
+
+def get_total_count(query):
+    """query 관련 전체 매칭 뉴스 건수(당일 스냅샷)를 반환한다.
+
+    네이버 뉴스검색 API는 날짜 범위 필터가 없고 display 상한도 100건이라, 여러 날에
+    걸친 언급량 "추이"는 이 API로 만들 수 없다(대형주는 최신 100건이 하루 안에
+    소진됨). 그래서 이 함수는 시계열이 아니라 "지금 이 순간 얼마나 화제인가"를 보는
+    당일 스냅샷/보조 지표로만 쓴다 — 확산 단계 진단의 시계열 축은
+    search_trend_collector.get_search_trend()(데이터랩 검색량)가 담당한다.
+    """
+    resp = requests.get(
+        NAVER_NEWS_URL, headers=_headers(), params={'query': query, 'display': 1}, timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json().get('total', 0)
