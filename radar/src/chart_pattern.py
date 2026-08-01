@@ -83,6 +83,25 @@ def filter_single_stocks(df):
     return df[mask]
 
 
+TOP_MARCAP_N = 2000
+
+
+def filter_top_marcap(df, top_n=TOP_MARCAP_N):
+    """조회 기간의 마지막 거래일 기준 시가총액 상위 top_n 종목만 남긴다.
+
+    marcap 데이터의 Rank 컬럼(당일 전체 시가총액 순위, 코스피+코스닥+코넥스+
+    우선주 등 전체 상장종목 기준)을 그대로 이용한다. 이 함수는 보통
+    filter_single_stocks 이후에 적용해서 "코스피/코스닥 보통주 중 시가총액
+    상위 top_n"이 되도록 한다.
+    """
+    if df.empty:
+        return df
+    last_date = df.index.max()
+    snapshot = df[df.index == last_date]
+    top_codes = set(snapshot.loc[snapshot['Rank'] <= top_n, 'Code'])
+    return df[df['Code'].isin(top_codes)]
+
+
 def _resample_normalize(values, n_points=N_POINTS):
     """종가 배열을 n_points 길이로 리샘플링 + 0~1 정규화. 데이터가 너무 적거나
     (거래정지 등) 완전히 평평하면 None을 반환한다."""

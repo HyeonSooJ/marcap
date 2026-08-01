@@ -25,7 +25,7 @@ from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
     PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, resolve_date_range, filter_single_stocks,
-    find_matching_stocks,
+    filter_top_marcap, find_matching_stocks,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -253,6 +253,7 @@ with tab5:
                 st.session_state['pattern_result'] = None
             else:
                 df = filter_single_stocks(df)
+                df = filter_top_marcap(df)
                 matched = find_matching_stocks(df, pattern_key)
                 if matched.empty:
                     st.session_state['pattern_result'] = matched
