@@ -57,6 +57,11 @@ BREAKOUT_RECENT_MONTHS = 1
 # 표시 개수를 늘린다 (검증 결과: 상관계수 기준 상위 20개만으로는 실제 사용자가
 # 원하는 종목 다수가 순위 밖으로 밀려남).
 BREAKOUT_TOP_N = 100
+# "너무 작은 잡주는 안 된다"는 요청 반영. 사용자가 준 15개 예시 종목의 시가총액/
+# 최근 1개월 평균 거래대금 최솟값(각각 약 1,079억원, 16.9억원)에 여유를 두고
+# 잡았다 — 이보다 작은 종목은 제외한다.
+BREAKOUT_MIN_MARCAP = 100_000_000_000       # 시가총액 1,000억원 미만 제외
+BREAKOUT_MIN_RECENT_AMOUNT = 1_000_000_000  # 최근 1개월 평균 거래대금 10억원 미만 제외
 
 
 def resolve_date_range(end_date, months):
@@ -128,14 +133,19 @@ def _breakout_surge(group, window_end, recent_months=BREAKOUT_RECENT_MONTHS):
     끝나고 식은) 종목은 지금 시점에서 찾을 필요가 없으므로 None을 반환해
     제외한다.
 
-    :param group: 한 종목의 marcap 데이터 (DatetimeIndex, Close 컬럼, 날짜순 정렬됨)
+    :param group: 한 종목의 marcap 데이터 (DatetimeIndex, Close/Amount/Marcap
+        컬럼, 날짜순 정렬됨)
     :param window_end: 조회 종료일
     """
     if len(group) < 10:
         return None
+    if group['Marcap'].iloc[-1] < BREAKOUT_MIN_MARCAP:
+        return None
     recent_start = window_end - pd.DateOffset(months=recent_months)
     recent = group[group.index >= recent_start]
     if recent.empty:
+        return None
+    if recent['Amount'].mean() < BREAKOUT_MIN_RECENT_AMOUNT:
         return None
     peak_date = recent['Close'].idxmax()
     peak_val = recent.loc[peak_date, 'Close']
@@ -186,6 +196,13 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
         score = np.corrcoef(normalized, reference)[0, 1]
         if np.isnan(score):
             continue
+        if show_breakout:
+            # 최근 1개월 내 고점 + 최소 시가총액/거래대금을 만족 못하면 애초에
+            # "④ 횡보 후 급등형" 후보 자격이 없는 것으로 보고 제외한다(등수만
+            # 밀어내는 게 아니라 목록에서 아예 뺀다).
+            breakout_return = _breakout_surge(group, window_end)
+            if breakout_return is None:
+                continue
         last_row = group.iloc[-1]
         row = {
             'Code': code,
@@ -195,7 +212,7 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
             'Score': score,
         }
         if show_breakout:
-            row['BreakoutReturn'] = _breakout_surge(group, window_end)
+            row['BreakoutReturn'] = breakout_return
         rows.append(row)
 
     columns = ['Code', 'Name', 'Close', 'Marcap', 'Score']
@@ -204,9 +221,13 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
     result = pd.DataFrame(rows, columns=columns)
     if result.empty:
         return result
-    sort_col = 'BreakoutReturn' if show_breakout else 'Score'
+    # 모양이 기준 패턴과 얼마나 비슷한지(Score)로 최종 정렬한다. sideways_breakout도
+    # 마찬가지다 — "얼마나 많이 올랐는지"보다 "얼마나 전형적인 횡보-후-급등 모양인지"가
+    # 사용자가 찾으려는 기준에 더 가깝다는 게 실제 예시 종목으로 검증됨(상승률 정렬은
+    # 시장 전체의 극단적 상승 종목들이 상위를 차지해버려 원하는 종목들이 순위 밖으로
+    # 밀려났었음).
     return (
-        result.sort_values(sort_col, ascending=False, na_position='last')
+        result.sort_values('Score', ascending=False)
         .head(top_n)
         .reset_index(drop=True)
     )
