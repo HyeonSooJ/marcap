@@ -24,7 +24,8 @@ from src.investor_profile import (  # noqa: E402
 from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
-    PATTERN_DEFINITIONS, resolve_date_range, filter_single_stocks, find_matching_stocks,
+    PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, resolve_date_range, filter_single_stocks,
+    find_matching_stocks,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -266,6 +267,7 @@ with tab5:
                         matched['PER'] = pd.NA
                     st.session_state['pattern_result'] = matched
                     st.session_state['pattern_range'] = (start, end)
+                    st.session_state['pattern_result_key'] = pattern_key
 
     matched = st.session_state.get('pattern_result')
     if matched is None:
@@ -276,7 +278,13 @@ with tab5:
         start, end = st.session_state['pattern_range']
         st.caption(t('tab5_result_caption', lang, start=start.date(), end=end.date(), n=len(matched)))
         show_cols = ['Name', 'Close', 'Sector', 'Marcap', 'PER']
+        if st.session_state.get('pattern_result_key') == BREAKOUT_PATTERN_KEY:
+            show_cols.append('BreakoutReturn')
+            st.caption(t('tab5_breakout_note', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
-        display_matched = matched[show_cols].rename(columns=col_map)
+        display_matched = matched[show_cols].copy()
+        if 'BreakoutReturn' in display_matched.columns:
+            display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
+        display_matched = display_matched.rename(columns=col_map)
         st.dataframe(display_matched, use_container_width=True, hide_index=True)

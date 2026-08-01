@@ -46,6 +46,11 @@ PATTERN_DEFINITIONS = {
     },
 }
 
+# sideways_breakout 패턴의 급등 구간은 shape 정의상 마지막 20%(x=0.8~1.0)에서 시작한다.
+# 이 패턴을 골랐을 때만 "마지막 구간 상승폭(%)"을 별도로 계산해서 보여준다.
+BREAKOUT_PATTERN_KEY = 'sideways_breakout'
+LAST_SEGMENT_FRACTION = 0.2
+
 
 def resolve_date_range(end_date, months):
     """선택한 종료일 + 개월 수로 조회 시작일을 계산한다 (달력 개월 기준).
@@ -88,6 +93,23 @@ def _resample_normalize(values, n_points=N_POINTS):
     return (y - y_min) / (y_max - y_min)
 
 
+def _last_segment_return(closes, fraction=LAST_SEGMENT_FRACTION):
+    """마지막 fraction 구간(예: 최근 20%)의 상승률(%)을 계산한다.
+
+    구간 시작 시점 종가 대비 기간 마지막 종가의 변화율. 데이터가 너무 적으면
+    None을 반환한다.
+    """
+    closes = np.asarray(closes, dtype=float)
+    closes = closes[~np.isnan(closes)]
+    if len(closes) < 5:
+        return None
+    cut = min(int(len(closes) * (1 - fraction)), len(closes) - 1)
+    base = closes[cut]
+    if base == 0:
+        return None
+    return (closes[-1] / base - 1) * 100
+
+
 def find_matching_stocks(price_df, pattern_key, top_n=20, min_coverage=0.6):
     """기간 내 종가 흐름이 지정한 차트 패턴과 가장 비슷한 종목을 찾는다.
 
@@ -99,11 +121,13 @@ def find_matching_stocks(price_df, pattern_key, top_n=20, min_coverage=0.6):
     :param min_coverage: 조회 기간의 영업일 대비 최소 데이터 보유 비율
         (거래정지/상장폐지 등으로 데이터가 너무 적은 종목은 제외)
     :return: DataFrame [Code, Name, Close, Marcap, Score] (Score 내림차순, 즉
-        패턴과 가장 비슷한 종목이 먼저 옴)
+        패턴과 가장 비슷한 종목이 먼저 옴). pattern_key가 BREAKOUT_PATTERN_KEY이면
+        BreakoutReturn(마지막 20% 구간 상승률, %) 컬럼이 추가된다.
     """
     if pattern_key not in PATTERN_DEFINITIONS:
         raise ValueError(f'알 수 없는 패턴: {pattern_key}')
     reference = PATTERN_DEFINITIONS[pattern_key]['shape']
+    show_breakout = pattern_key == BREAKOUT_PATTERN_KEY
 
     expected_days = price_df.index.normalize().nunique()
     rows = []
@@ -119,15 +143,21 @@ def find_matching_stocks(price_df, pattern_key, top_n=20, min_coverage=0.6):
         if np.isnan(score):
             continue
         last_row = group.iloc[-1]
-        rows.append({
+        row = {
             'Code': code,
             'Name': last_row['Name'],
             'Close': last_row['Close'],
             'Marcap': last_row['Marcap'],
             'Score': score,
-        })
+        }
+        if show_breakout:
+            row['BreakoutReturn'] = _last_segment_return(group['Close'].values)
+        rows.append(row)
 
-    result = pd.DataFrame(rows, columns=['Code', 'Name', 'Close', 'Marcap', 'Score'])
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'Score']
+    if show_breakout:
+        columns.append('BreakoutReturn')
+    result = pd.DataFrame(rows, columns=columns)
     if result.empty:
         return result
     return result.sort_values('Score', ascending=False).head(top_n).reset_index(drop=True)

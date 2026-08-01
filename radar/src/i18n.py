@@ -182,6 +182,10 @@ TRANSLATIONS = {
         'en': '{start} ~ {end}, {n} stocks matched',
     },
     'tab5_price_col': {'ko': '현재가', 'en': 'Price'},
+    'tab5_breakout_note': {
+        'ko': '④ 횡보 후 급등형을 선택하면 마지막 20% 구간(급등 구간) 상승률을 함께 보여줍니다.',
+        'en': 'For ④ Sideways-then-Breakout, the rise (%) over the last 20% of the period is also shown.',
+    },
     'tab5_sector_fail': {
         'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
         'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
@@ -221,6 +225,7 @@ COLUMN_LABELS = {
     'Marcap': {'ko': '시가총액(백만원)', 'en': 'Market Cap (KRW mn)'},
     'Sector': {'ko': '분야(업종)', 'en': 'Sector'},
     'PER': {'ko': 'PER', 'en': 'PER'},
+    'BreakoutReturn': {'ko': '마지막 구간 상승률(%)', 'en': 'Last-segment Return (%)'},
 }
 
 
