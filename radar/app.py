@@ -287,4 +287,16 @@ with tab5:
         if 'BreakoutReturn' in display_matched.columns:
             display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
         display_matched = display_matched.rename(columns=col_map)
-        st.dataframe(display_matched, use_container_width=True, hide_index=True)
+
+        chart_col = t('tab5_chart_col', lang)
+        display_matched[chart_col] = (
+            'https://finance.naver.com/item/main.naver?code=' + matched['Code']
+        )
+        st.dataframe(
+            display_matched, use_container_width=True, hide_index=True,
+            column_config={
+                chart_col: st.column_config.LinkColumn(
+                    chart_col, display_text=t('tab5_chart_link_text', lang),
+                ),
+            },
+        )
