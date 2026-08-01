@@ -46,10 +46,16 @@ PATTERN_DEFINITIONS = {
     },
 }
 
-# sideways_breakout 패턴의 급등 구간은 shape 정의상 마지막 20%(x=0.8~1.0)에서 시작한다.
-# 이 패턴을 골랐을 때만 "마지막 구간 상승폭(%)"을 별도로 계산해서 보여준다.
+# sideways_breakout 패턴 전용 랭킹/표시 로직에서 쓰는 값들.
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
-LAST_SEGMENT_FRACTION = 0.2
+# 실제 사용자가 예시로 든 종목들을 검증해보니(2025-09-03~2026-03-03), 급등 직전 저점이
+# 항상 "마지막 20%"에 딱 걸쳐있지 않고 조금 더 이른 시점(예: 70~80% 지점)에 있는
+# 경우가 많았다. 그래서 저점 탐색 구간을 마지막 20%가 아니라 마지막 60%로 넓혔다.
+BREAKOUT_SEARCH_WINDOW_FRACTION = 0.6
+# 이 패턴은 "상승률이 큰 종목을 최대한 폭넓게 보여주는" 용도라 다른 패턴보다 기본
+# 표시 개수를 늘린다 (검증 결과: 상관계수 기준 상위 20개만으로는 실제 사용자가
+# 원하는 종목 다수가 순위 밖으로 밀려남).
+BREAKOUT_TOP_N = 100
 
 
 def resolve_date_range(end_date, months):
@@ -93,41 +99,53 @@ def _resample_normalize(values, n_points=N_POINTS):
     return (y - y_min) / (y_max - y_min)
 
 
-def _last_segment_return(closes, fraction=LAST_SEGMENT_FRACTION):
-    """마지막 fraction 구간(예: 최근 20%)의 상승률(%)을 계산한다.
+def _breakout_surge(closes, search_window_fraction=BREAKOUT_SEARCH_WINDOW_FRACTION):
+    """"횡보 후 급등"의 상승 폭(%)을 계산한다.
 
-    구간 시작 시점 종가 대비 기간 마지막 종가의 변화율. 데이터가 너무 적으면
-    None을 반환한다.
+    기간의 마지막 search_window_fraction 구간에서 최저가(저점)를 찾고, 그
+    저점 이후 최고가까지의 상승률을 반환한다. 마지막 날 종가만 보는 대신
+    "저점 이후 최고가"를 보는 이유: 급등 후 며칠 사이 살짝 눌림목이 와도
+    (예: 고점 찍고 조금 내려온 채로 조회 종료일을 맞아도) 급등 자체는
+    놓치지 않기 위함.
     """
     closes = np.asarray(closes, dtype=float)
     closes = closes[~np.isnan(closes)]
-    if len(closes) < 5:
+    n = len(closes)
+    if n < 10:
         return None
-    cut = min(int(len(closes) * (1 - fraction)), len(closes) - 1)
-    base = closes[cut]
-    if base == 0:
+    win_start = int(n * (1 - search_window_fraction))
+    window = closes[win_start:]
+    trough_idx = win_start + int(np.argmin(window))
+    trough_val = closes[trough_idx]
+    if trough_val <= 0:
         return None
-    return (closes[-1] / base - 1) * 100
+    peak_val = closes[trough_idx:].max()
+    return (peak_val / trough_val - 1) * 100
 
 
-def find_matching_stocks(price_df, pattern_key, top_n=20, min_coverage=0.6):
+def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
     """기간 내 종가 흐름이 지정한 차트 패턴과 가장 비슷한 종목을 찾는다.
 
     :param price_df: marcap_data(start, end)로 불러온 DataFrame (여러 종목,
         DatetimeIndex, Code/Name/Close/Market/Dept 컬럼 포함). filter_single_stocks
         적용 여부는 호출하는 쪽에서 결정한다.
     :param pattern_key: PATTERN_DEFINITIONS의 키
-    :param top_n: 반환할 종목 수
+    :param top_n: 반환할 종목 수. None이면 패턴별 기본값(BREAKOUT_PATTERN_KEY는
+        BREAKOUT_TOP_N, 그 외는 20)을 쓴다.
     :param min_coverage: 조회 기간의 영업일 대비 최소 데이터 보유 비율
         (거래정지/상장폐지 등으로 데이터가 너무 적은 종목은 제외)
-    :return: DataFrame [Code, Name, Close, Marcap, Score] (Score 내림차순, 즉
-        패턴과 가장 비슷한 종목이 먼저 옴). pattern_key가 BREAKOUT_PATTERN_KEY이면
-        BreakoutReturn(마지막 20% 구간 상승률, %) 컬럼이 추가된다.
+    :return: DataFrame [Code, Name, Close, Marcap, Score]. pattern_key가
+        BREAKOUT_PATTERN_KEY이면 BreakoutReturn(저점 대비 이후 고점 상승률, %)
+        컬럼이 추가되고, 정렬 기준도 Score가 아니라 BreakoutReturn 내림차순이
+        된다 — 이 패턴은 "모양이 비슷한 정도"보다 "실제로 얼마나 급등했는지"가
+        사용자가 찾으려는 핵심이기 때문이다.
     """
     if pattern_key not in PATTERN_DEFINITIONS:
         raise ValueError(f'알 수 없는 패턴: {pattern_key}')
     reference = PATTERN_DEFINITIONS[pattern_key]['shape']
     show_breakout = pattern_key == BREAKOUT_PATTERN_KEY
+    if top_n is None:
+        top_n = BREAKOUT_TOP_N if show_breakout else 20
 
     expected_days = price_df.index.normalize().nunique()
     rows = []
@@ -151,7 +169,7 @@ def find_matching_stocks(price_df, pattern_key, top_n=20, min_coverage=0.6):
             'Score': score,
         }
         if show_breakout:
-            row['BreakoutReturn'] = _last_segment_return(group['Close'].values)
+            row['BreakoutReturn'] = _breakout_surge(group['Close'].values)
         rows.append(row)
 
     columns = ['Code', 'Name', 'Close', 'Marcap', 'Score']
@@ -160,4 +178,9 @@ def find_matching_stocks(price_df, pattern_key, top_n=20, min_coverage=0.6):
     result = pd.DataFrame(rows, columns=columns)
     if result.empty:
         return result
-    return result.sort_values('Score', ascending=False).head(top_n).reset_index(drop=True)
+    sort_col = 'BreakoutReturn' if show_breakout else 'Score'
+    return (
+        result.sort_values(sort_col, ascending=False, na_position='last')
+        .head(top_n)
+        .reset_index(drop=True)
+    )
