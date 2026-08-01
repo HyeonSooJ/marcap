@@ -22,7 +22,10 @@ from src.investor_profile import (  # noqa: E402
     classify_profile, build_fallback_alert,
 )
 from src.llm_report import generate_personalized_alert  # noqa: E402
-from src.i18n import t, col_label, reason_label  # noqa: E402
+from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
+from src.chart_pattern import (  # noqa: E402
+    PATTERN_DEFINITIONS, resolve_date_range, filter_single_stocks, find_matching_stocks,
+)
 from marcap_utils import marcap_data  # noqa: E402
 
 if 'lang' not in st.session_state:
@@ -47,8 +50,9 @@ lang = st.session_state['lang']
 st.title(t('title', lang))
 st.caption(t('top_caption', lang))
 
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     t('tab1_name', lang), t('tab2_name', lang), t('tab3_name', lang), t('tab4_name', lang),
+    t('tab5_name', lang),
 ])
 
 with tab1:
@@ -223,3 +227,56 @@ with tab4:
                     alert_text = build_fallback_alert(diffusion_summary, profile_key, lang=lang)
 
                 st.markdown(f'> {alert_text}')
+
+with tab5:
+    st.subheader(t('tab5_subheader', lang))
+    st.markdown(t('tab5_explain', lang))
+
+    col1, col2, col3 = st.columns(3)
+    end_date = col1.date_input(
+        t('tab5_end_date_label', lang), value=datetime.today().date(),
+        max_value=datetime.today().date(), key='pattern_end_date',
+    )
+    months = col2.selectbox(t('tab5_months_label', lang), list(range(1, 13)), index=2, key='pattern_months')
+    pattern_key = col3.selectbox(
+        t('tab5_pattern_label', lang), list(PATTERN_DEFINITIONS.keys()),
+        format_func=lambda k: pattern_label(k, lang), key='pattern_key',
+    )
+
+    if st.button(t('tab5_confirm_button', lang), type='primary'):
+        start, end = resolve_date_range(end_date, months)
+        with st.spinner(t('tab5_loading', lang)):
+            df = marcap_data(start, end)
+            if df.empty:
+                st.warning(t('tab5_no_data', lang))
+                st.session_state['pattern_result'] = None
+            else:
+                df = filter_single_stocks(df)
+                matched = find_matching_stocks(df, pattern_key)
+                if matched.empty:
+                    st.session_state['pattern_result'] = matched
+                else:
+                    try:
+                        from src.sector_data import get_sector_and_per
+                        sector_per = get_sector_and_per(end)
+                        matched = matched.join(sector_per, on='Code')
+                    except Exception as e:
+                        st.warning(t('tab5_sector_fail', lang, error=e))
+                        matched['Sector'] = pd.NA
+                        matched['PER'] = pd.NA
+                    st.session_state['pattern_result'] = matched
+                    st.session_state['pattern_range'] = (start, end)
+
+    matched = st.session_state.get('pattern_result')
+    if matched is None:
+        pass
+    elif matched.empty:
+        st.info(t('tab5_no_match', lang))
+    else:
+        start, end = st.session_state['pattern_range']
+        st.caption(t('tab5_result_caption', lang, start=start.date(), end=end.date(), n=len(matched)))
+        show_cols = ['Name', 'Close', 'Sector', 'Marcap', 'PER']
+        col_map = {c: col_label(c, lang) for c in show_cols}
+        col_map['Close'] = t('tab5_price_col', lang)
+        display_matched = matched[show_cols].rename(columns=col_map)
+        st.dataframe(display_matched, use_container_width=True, hide_index=True)

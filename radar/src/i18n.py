@@ -151,6 +151,40 @@ TRANSLATIONS = {
 
     'lang_popover_label': {'ko': '🌐', 'en': '🌐'},
     'lang_picker_label': {'ko': '언어 / Language', 'en': 'Language / 언어'},
+
+    'tab5_name': {'ko': '차트 모양 조건검색', 'en': 'Chart Shape Screener'},
+    'tab5_subheader': {'ko': '📐 차트 모양 조건검색', 'en': '📐 Chart Shape Screener'},
+    'tab5_explain': {
+        'ko': (
+            '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 4가지 차트 모양(우상향/'
+            '우하향/V자 반등/역V자 급등급락)과 비교해, 선택한 모양과 가장 비슷하게 움직인 국내 '
+            '보통주(우선주·스팩·리츠·코넥스 제외)를 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 '
+            '조회하며, 조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
+        ),
+        'en': (
+            "Pick an end date and a lookback period, and this compares each stock's closing-price "
+            'movement over that period against 4 chart shapes (uptrend / downtrend / V-shape rebound / '
+            'inverse-V spike-and-drop) to find domestic common stocks (excluding preferred shares, '
+            'SPACs, REITs, KONEX) that moved most like the shape you picked. Sector/PER are fetched '
+            'separately from KRX (pykrx); those cells may be blank if that lookup fails.'
+        ),
+    },
+    'tab5_end_date_label': {'ko': '① 기준일(종료일) 선택', 'en': '① Pick end date'},
+    'tab5_months_label': {'ko': '② 조회 개월 수', 'en': '② Lookback (months)'},
+    'tab5_pattern_label': {'ko': '③ 차트 모양 선택', 'en': '③ Pick chart shape'},
+    'tab5_confirm_button': {'ko': '④ 확인 — 종목 찾기', 'en': '④ Confirm — Find stocks'},
+    'tab5_loading': {'ko': '조건에 맞는 종목을 찾는 중...', 'en': 'Searching for matching stocks...'},
+    'tab5_no_data': {'ko': '해당 기간에 데이터가 없습니다.', 'en': 'No data for that period.'},
+    'tab5_no_match': {'ko': '조건에 맞는 종목을 찾지 못했습니다.', 'en': 'No matching stocks found.'},
+    'tab5_result_caption': {
+        'ko': '{start} ~ {end} 기간, {n}개 종목 매칭',
+        'en': '{start} ~ {end}, {n} stocks matched',
+    },
+    'tab5_price_col': {'ko': '현재가', 'en': 'Price'},
+    'tab5_sector_fail': {
+        'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
+        'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
+    },
 }
 
 REASON_LABELS = {
@@ -183,7 +217,16 @@ COLUMN_LABELS = {
     'Detected': {'ko': '조기탐지 여부', 'en': 'Detected'},
     'FirstFlagDate': {'ko': '최초 탐지일', 'en': 'First Flagged'},
     'LeadDaysApprox': {'ko': '리드타임(영업일)', 'en': 'Lead Time (days)'},
+    'Marcap': {'ko': '시가총액(백만원)', 'en': 'Market Cap (KRW mn)'},
+    'Sector': {'ko': '분야(업종)', 'en': 'Sector'},
+    'PER': {'ko': 'PER', 'en': 'PER'},
 }
+
+
+def pattern_label(pattern_key, lang):
+    """chart_pattern.PATTERN_DEFINITIONS의 key를 화면 표시용 라벨로 바꾼다."""
+    from .chart_pattern import PATTERN_DEFINITIONS
+    return PATTERN_DEFINITIONS[pattern_key]['label'][lang]
 
 
 def t(key, lang, **kwargs):

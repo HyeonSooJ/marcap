@@ -20,11 +20,13 @@ radar/
 │   ├── diffusion_model.py        # SIR 역학모델 기반 관심 확산 진단(Rt, 4단계)
 │   ├── investor_profile.py       # 투자 성향 설문 태깅(A-lite) + 규칙 기반 대체 문구
 │   ├── llm_report.py             # Claude 기반 원인 해설 + 개인화 경고 생성
+│   ├── chart_pattern.py          # 차트 모양(우상향/우하향/V자/역V자) 조건검색 매칭 엔진
+│   ├── sector_data.py            # pykrx 기반 업종/PER 조회(로컬 캐싱)
 │   └── pipeline.py               # 전체 파이프라인 오케스트레이션
 ├── scripts/
 │   ├── backtest.py               # 조기경보 성능 백테스트 CLI
 │   └── backtest_diffusion.py     # SIR 확산 진단 예측력 백테스트 CLI
-├── app.py                        # Streamlit 데모 대시보드 (4개 탭)
+├── app.py                        # Streamlit 데모 대시보드 (5개 탭)
 ├── proposal/
 │   ├── 제안서.md                  # KODATA·BDAI 공모전 제안서 (1차 버전)
 │   └── KB_AI_챌린지_제안서.md     # KB AI 챌린지 제안서 (확산 진단·개인화 확장판)
@@ -48,6 +50,12 @@ pip install -r radar/requirements.txt
 | `ANTHROPIC_API_KEY` | https://console.anthropic.com | 이상탐지 수치만 표시, LLM 리포트 생략 |
 
 키가 없어도 이상탐지 엔진 자체는 정상 동작합니다(단계적으로 기능이 줄어드는 구조).
+
+`sector_data.py`(업종/PER 조회, 5번째 탭에서 사용)는 별도 API 키는 필요 없지만
+`pykrx`를 통해 KRX 정보데이터시스템(data.krx.co.kr)에 직접 접속해야 동작합니다.
+접속이 막힌 환경(예: 아웃바운드가 제한된 샌드박스)에서는 조회에 실패하고, 이
+경우에도 차트 모양 조건검색 자체(marcap 로컬 데이터 기반)는 정상 동작하되
+업종/PER 칸만 비어서 표시됩니다.
 
 ```bash
 cp radar/.env.example radar/.env

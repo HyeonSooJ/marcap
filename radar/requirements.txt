@@ -4,3 +4,4 @@ pyarrow>=14.0
 requests>=2.31
 anthropic>=0.40
 streamlit>=1.38
+pykrx>=1.0
