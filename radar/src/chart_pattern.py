@@ -48,10 +48,11 @@ PATTERN_DEFINITIONS = {
 
 # sideways_breakout 패턴 전용 랭킹/표시 로직에서 쓰는 값들.
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
-# 실제 사용자가 예시로 든 종목들을 검증해보니(2025-09-03~2026-03-03), 급등 직전 저점이
-# 항상 "마지막 20%"에 딱 걸쳐있지 않고 조금 더 이른 시점(예: 70~80% 지점)에 있는
-# 경우가 많았다. 그래서 저점 탐색 구간을 마지막 20%가 아니라 마지막 60%로 넓혔다.
-BREAKOUT_SEARCH_WINDOW_FRACTION = 0.6
+# 사용자 예시 종목들을 검증해보니(2025-09-03~2026-03-03), 고점(돌파 완료 시점)이
+# 조회 종료일 기준 최근 1개월 안에 몰려있었다("오래전에 이미 급등했다가 식은 종목"은
+# 제외하고 "최근에 막 급등한 종목"만 원하는 것). 그래서 고점은 반드시 최근 1개월
+# 이내여야 하고, 저점은 그 이전 구간 전체에서 찾는다(급등 시작점은 더 이를 수 있음).
+BREAKOUT_RECENT_MONTHS = 1
 # 이 패턴은 "상승률이 큰 종목을 최대한 폭넓게 보여주는" 용도라 다른 패턴보다 기본
 # 표시 개수를 늘린다 (검증 결과: 상관계수 기준 상위 20개만으로는 실제 사용자가
 # 원하는 종목 다수가 순위 밖으로 밀려남).
@@ -118,27 +119,32 @@ def _resample_normalize(values, n_points=N_POINTS):
     return (y - y_min) / (y_max - y_min)
 
 
-def _breakout_surge(closes, search_window_fraction=BREAKOUT_SEARCH_WINDOW_FRACTION):
-    """"횡보 후 급등"의 상승 폭(%)을 계산한다.
+def _breakout_surge(group, window_end, recent_months=BREAKOUT_RECENT_MONTHS):
+    """"횡보 후 급등"의 상승 폭(%)을 계산한다. 고점이 최근에 없으면 None.
 
-    기간의 마지막 search_window_fraction 구간에서 최저가(저점)를 찾고, 그
-    저점 이후 최고가까지의 상승률을 반환한다. 마지막 날 종가만 보는 대신
-    "저점 이후 최고가"를 보는 이유: 급등 후 며칠 사이 살짝 눌림목이 와도
-    (예: 고점 찍고 조금 내려온 채로 조회 종료일을 맞아도) 급등 자체는
-    놓치지 않기 위함.
+    조회 종료일(window_end) 기준 최근 recent_months(기본 1개월) 안에서 고점을
+    찾고, 그 이전 구간 전체에서 저점(급등 시작 전 최저가)을 찾아 상승률을
+    계산한다. 고점이 최근 1개월보다 더 예전에 있었던(=이미 오래전에 급등이
+    끝나고 식은) 종목은 지금 시점에서 찾을 필요가 없으므로 None을 반환해
+    제외한다.
+
+    :param group: 한 종목의 marcap 데이터 (DatetimeIndex, Close 컬럼, 날짜순 정렬됨)
+    :param window_end: 조회 종료일
     """
-    closes = np.asarray(closes, dtype=float)
-    closes = closes[~np.isnan(closes)]
-    n = len(closes)
-    if n < 10:
+    if len(group) < 10:
         return None
-    win_start = int(n * (1 - search_window_fraction))
-    window = closes[win_start:]
-    trough_idx = win_start + int(np.argmin(window))
-    trough_val = closes[trough_idx]
+    recent_start = window_end - pd.DateOffset(months=recent_months)
+    recent = group[group.index >= recent_start]
+    if recent.empty:
+        return None
+    peak_date = recent['Close'].idxmax()
+    peak_val = recent.loc[peak_date, 'Close']
+    pre_peak = group.loc[:peak_date, 'Close']
+    if len(pre_peak) < 5:
+        return None
+    trough_val = pre_peak.min()
     if trough_val <= 0:
         return None
-    peak_val = closes[trough_idx:].max()
     return (peak_val / trough_val - 1) * 100
 
 
@@ -167,6 +173,7 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
         top_n = BREAKOUT_TOP_N if show_breakout else 20
 
     expected_days = price_df.index.normalize().nunique()
+    window_end = price_df.index.max()
     rows = []
     for code, group in price_df.groupby('Code', sort=False):
         group = group.sort_index()
@@ -188,7 +195,7 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
             'Score': score,
         }
         if show_breakout:
-            row['BreakoutReturn'] = _breakout_surge(group['Close'].values)
+            row['BreakoutReturn'] = _breakout_surge(group, window_end)
         rows.append(row)
 
     columns = ['Code', 'Name', 'Close', 'Marcap', 'Score']
