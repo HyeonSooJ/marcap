@@ -6,8 +6,12 @@
 정렬한다. 사용자가 그때그때 이미지를 그려서 인식시키는 대신, 패턴 자체를 미리
 숫자로 정의해두고 전종목을 한 번에 빠르게(무료로) 비교하기 위함이다.
 
-TODO: 아래 PATTERN_DEFINITIONS의 shape는 임시 기본값이다. 실제 사용자가 그린 4개
-패턴 그림을 받으면 그 모양에 맞춰 키포인트만 교체하면 된다 (계산 로직은 그대로).
+4개 패턴은 사용자가 직접 그려 전달한 손그림을 그대로 옮긴 것이다(키포인트만
+숫자로 옮겼을 뿐 계산 로직과는 무관):
+  1. 우상향형 - 완만하게 꾸준히 오르는 직선형
+  2. 박스권 V자 반등형 - 저항선 부근에서 시작 -> 중간에 저점 -> 다시 원래 수준으로 복귀
+  3. V자 반등 후 상승돌파형 - 2번처럼 저점을 찍지만, 원래 수준을 뚫고 더 높이 상승
+  4. 횡보 후 급등형 - 대부분 구간은 옆으로 횡보하다가 막판에 거의 수직으로 급등
 """
 
 import numpy as np
@@ -25,20 +29,20 @@ def _keypoints_to_shape(keypoints, n_points=N_POINTS):
 
 PATTERN_DEFINITIONS = {
     'uptrend': {
-        'label': {'ko': '우상향형', 'en': 'Uptrend'},
+        'label': {'ko': '① 우상향형', 'en': '① Uptrend'},
         'shape': _keypoints_to_shape([(0, 0.0), (1, 1.0)]),
     },
-    'downtrend': {
-        'label': {'ko': '우하향형', 'en': 'Downtrend'},
-        'shape': _keypoints_to_shape([(0, 1.0), (1, 0.0)]),
+    'range_v_rebound': {
+        'label': {'ko': '② 박스권 V자 반등형', 'en': '② Range-bound V-shape Rebound'},
+        'shape': _keypoints_to_shape([(0, 1.0), (0.15, 0.85), (0.55, 0.0), (0.85, 0.85), (1.0, 1.0)]),
     },
-    'v_shape': {
-        'label': {'ko': 'V자 반등형', 'en': 'V-shape Rebound'},
-        'shape': _keypoints_to_shape([(0, 1.0), (0.5, 0.0), (1, 1.0)]),
+    'v_rebound_breakout': {
+        'label': {'ko': '③ V자 반등 후 상승돌파형', 'en': '③ V-shape Rebound + Breakout'},
+        'shape': _keypoints_to_shape([(0, 0.4), (0.2, 0.3), (0.55, 0.0), (0.75, 0.4), (1.0, 1.0)]),
     },
-    'inverse_v': {
-        'label': {'ko': '역V자 급등급락형', 'en': 'Inverse-V (Spike & Drop)'},
-        'shape': _keypoints_to_shape([(0, 0.0), (0.5, 1.0), (1, 0.0)]),
+    'sideways_breakout': {
+        'label': {'ko': '④ 횡보 후 급등형', 'en': '④ Sideways then Sudden Breakout'},
+        'shape': _keypoints_to_shape([(0, 0.05), (0.4, 0.1), (0.75, 0.05), (0.8, 0.1), (1.0, 1.0)]),
     },
 }
 

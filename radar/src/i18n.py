@@ -156,17 +156,18 @@ TRANSLATIONS = {
     'tab5_subheader': {'ko': '📐 차트 모양 조건검색', 'en': '📐 Chart Shape Screener'},
     'tab5_explain': {
         'ko': (
-            '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 4가지 차트 모양(우상향/'
-            '우하향/V자 반등/역V자 급등급락)과 비교해, 선택한 모양과 가장 비슷하게 움직인 국내 '
-            '보통주(우선주·스팩·리츠·코넥스 제외)를 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 '
-            '조회하며, 조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
+            '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 4가지 차트 모양(①우상향 '
+            '②박스권 V자 반등 ③V자 반등 후 상승돌파 ④횡보 후 급등)과 비교해, 선택한 모양과 가장 '
+            '비슷하게 움직인 국내 보통주(우선주·스팩·리츠·코넥스 제외)를 찾아줍니다. 업종/PER은 '
+            'KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
         ),
         'en': (
             "Pick an end date and a lookback period, and this compares each stock's closing-price "
-            'movement over that period against 4 chart shapes (uptrend / downtrend / V-shape rebound / '
-            'inverse-V spike-and-drop) to find domestic common stocks (excluding preferred shares, '
-            'SPACs, REITs, KONEX) that moved most like the shape you picked. Sector/PER are fetched '
-            'separately from KRX (pykrx); those cells may be blank if that lookup fails.'
+            'movement over that period against 4 chart shapes (① uptrend ② range-bound V-shape '
+            'rebound ③ V-shape rebound + breakout ④ sideways then sudden breakout) to find domestic '
+            'common stocks (excluding preferred shares, SPACs, REITs, KONEX) that moved most like the '
+            'shape you picked. Sector/PER are fetched separately from KRX (pykrx); those cells may be '
+            'blank if that lookup fails.'
         ),
     },
     'tab5_end_date_label': {'ko': '① 기준일(종료일) 선택', 'en': '① Pick end date'},
