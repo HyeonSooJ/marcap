@@ -269,6 +269,10 @@ with tab5:
                     st.session_state['pattern_result'] = matched
                     st.session_state['pattern_range'] = (start, end)
                     st.session_state['pattern_result_key'] = pattern_key
+                    matched_codes = set(matched['Code'])
+                    st.session_state['pattern_chart_df'] = (
+                        df[df['Code'].isin(matched_codes)][['Code', 'Name', 'Close']].copy()
+                    )
 
     matched = st.session_state.get('pattern_result')
     if matched is None:
@@ -308,3 +312,17 @@ with tab5:
                 ),
             },
         )
+
+        st.divider()
+        st.markdown(t('tab5_chart_viewer_header', lang))
+        chart_df = st.session_state.get('pattern_chart_df')
+        if chart_df is not None and not chart_df.empty:
+            pick_options = matched[['Code', 'Name']].drop_duplicates().reset_index(drop=True)
+            pick_labels = [f"{r['Name']} ({r['Code']})" for _, r in pick_options.iterrows()]
+            picked_label = st.selectbox(
+                t('tab5_chart_pick_label', lang), pick_labels, key='pattern_chart_pick',
+            )
+            picked_code = pick_options.iloc[pick_labels.index(picked_label)]['Code']
+            series = chart_df[chart_df['Code'] == picked_code].sort_index()['Close']
+            st.line_chart(series)
+            st.caption(t('tab5_chart_viewer_caption', lang, start=start.date(), end=end.date()))

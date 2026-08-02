@@ -206,8 +206,17 @@ TRANSLATIONS = {
             'rough estimate, not investment advice.'
         ),
     },
-    'tab5_chart_col': {'ko': '차트', 'en': 'Chart'},
-    'tab5_chart_link_text': {'ko': '📈 차트보기', 'en': '📈 View chart'},
+    'tab5_chart_col': {'ko': '실시간 차트', 'en': 'Live Chart'},
+    'tab5_chart_link_text': {'ko': '📈 네이버에서 보기(실시간)', 'en': '📈 Open on Naver (live)'},
+    'tab5_chart_viewer_header': {
+        'ko': '#### 📊 조회 기간 기준 차트',
+        'en': '#### 📊 Chart for the Queried Period',
+    },
+    'tab5_chart_pick_label': {'ko': '종목 선택', 'en': 'Select a stock'},
+    'tab5_chart_viewer_caption': {
+        'ko': '{start} ~ {end} 기간의 종가만 표시합니다 (오늘 날짜 데이터 아님, 위 실시간 차트 링크와는 다릅니다).',
+        'en': 'Shows closing prices only for {start} ~ {end} (not today — different from the live chart link above).',
+    },
     'tab5_sector_fail': {
         'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
         'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
