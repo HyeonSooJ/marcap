@@ -286,6 +286,12 @@ with tab5:
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
         display_matched = matched[show_cols].copy()
+        display_matched['Close'] = display_matched['Close'].apply(
+            lambda v: f'{v:,.0f}' if pd.notna(v) else v,
+        )
+        display_matched['Marcap'] = display_matched['Marcap'].apply(
+            lambda v: f'{v / 1e8:,.0f}억' if pd.notna(v) else v,
+        )
         if 'BreakoutReturn' in display_matched.columns:
             display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
         display_matched = display_matched.rename(columns=col_map)
