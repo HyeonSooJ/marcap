@@ -282,6 +282,7 @@ with tab5:
         if st.session_state.get('pattern_result_key') == BREAKOUT_PATTERN_KEY:
             show_cols.append('BreakoutReturn')
             st.caption(t('tab5_breakout_note', lang))
+            st.warning(t('tab5_breakout_disclaimer', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
         display_matched = matched[show_cols].copy()

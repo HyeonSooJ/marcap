@@ -184,8 +184,27 @@ TRANSLATIONS = {
     },
     'tab5_price_col': {'ko': '현재가', 'en': 'Price'},
     'tab5_breakout_note': {
-        'ko': '④ 횡보 후 급등형을 선택하면 마지막 20% 구간(급등 구간) 상승률을 함께 보여줍니다.',
-        'en': 'For ④ Sideways-then-Breakout, the rise (%) over the last 20% of the period is also shown.',
+        'ko': '④ 횡보 후 급등형을 선택하면 저점 대비 이후 고점까지의 상승률(최근 1개월 내 고점 기준)을 함께 보여줍니다.',
+        'en': 'For ④ Sideways-then-Breakout, the rise (%) from the pre-breakout low to the subsequent high (peak within the last month) is also shown.',
+    },
+    'tab5_breakout_disclaimer': {
+        'ko': (
+            '⚠️ 이 목록은 **참고용 관심종목 후보**이며 상한가를 예측하는 것이 아닙니다. '
+            '2026년 5~6월 데이터로 워크포워드 백테스트(조회 시점까지의 데이터만 사용해 미래를 '
+            '모른다고 가정하고 검증)한 결과: 조회일 **다음날** 상한가를 간 비율은 **0.6%**로 '
+            '사실상 예측 불가능한 수준이었고, **다음날~한 달 내** 상한가를 간 비율은 **약 10%**로 '
+            '같은 후보군에서 무작위로 골랐을 때(5.2%)의 약 2배였습니다. 검증 표본이 8회뿐이라 '
+            '오차범위가 크니 투자 판단의 근거가 아니라 참고 자료로만 활용하세요.'
+        ),
+        'en': (
+            '⚠️ This list is for **reference as watchlist candidates only** — it does not predict '
+            'the daily price limit (limit-up). A walk-forward backtest on May-June 2026 data (using '
+            'only data available as of each test date, no lookahead) found: the probability of '
+            'hitting limit-up the **very next day** was **0.6%** — essentially unpredictable — while '
+            'the probability **within the following month** was **about 10%**, roughly 2x a random '
+            'pick from the same universe (5.2%). Based on only 8 test dates, so treat this as a '
+            'rough estimate, not investment advice.'
+        ),
     },
     'tab5_chart_col': {'ko': '차트', 'en': 'Chart'},
     'tab5_chart_link_text': {'ko': '📈 차트보기', 'en': '📈 View chart'},
