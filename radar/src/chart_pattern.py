@@ -44,7 +44,15 @@ PATTERN_DEFINITIONS = {
         'label': {'ko': '④ 횡보 후 급등형', 'en': '④ Sideways then Sudden Breakout'},
         'shape': _keypoints_to_shape([(0, 0.05), (0.4, 0.1), (0.75, 0.05), (0.8, 0.1), (1.0, 1.0)]),
     },
+    # 거래정지 종목은 "모양"이 아니라 상태(거래정지 여부)로 찾는 것이라 shape가 없다.
+    # find_matching_stocks가 아니라 find_halted_stocks가 별도로 처리한다.
+    'trading_halt': {
+        'label': {'ko': '⑤ 거래정지 종목', 'en': '⑤ Trading-halted Stocks'},
+        'shape': None,
+    },
 }
+
+HALT_PATTERN_KEY = 'trading_halt'
 
 # sideways_breakout 패턴 전용 랭킹/표시 로직에서 쓰는 값들.
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
@@ -228,6 +236,54 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
     # 밀려났었음).
     return (
         result.sort_values('Score', ascending=False)
+        .head(top_n)
+        .reset_index(drop=True)
+    )
+
+
+def find_halted_stocks(price_df, top_n=100):
+    """조회 종료일 기준 거래정지 중인 종목을 찾는다.
+
+    marcap 데이터는 거래정지일에도 종가/시가총액은 정지 직전 값 그대로, 거래량만
+    0으로 기록된다. 이 함수는 그 상태(마지막 날 Volume==0)를 그대로 이용한다.
+
+    :param price_df: marcap_data(start, end, include_halted=True)로 불러온
+        DataFrame — include_halted=False(기본값)로 불러오면 거래정지일 행 자체가
+        빠져있어 이 함수가 아무것도 못 찾는다.
+    :param top_n: 반환할 종목 수
+    :return: DataFrame [Code, Name, Close, Marcap, HaltStartDate, HaltDays]
+        (HaltStartDate 내림차순, 즉 최근에 정지된 종목이 먼저 옴).
+        HaltStartDate는 조회 시작일 이전부터 정지 중이었을 경우 조회 시작일로
+        표시된다(그 이전 데이터는 조회 범위 밖이라 알 수 없음).
+    """
+    rows = []
+    for code, group in price_df.groupby('Code', sort=False):
+        group = group.sort_index()
+        last_row = group.iloc[-1]
+        if last_row['Volume'] != 0:
+            continue  # 마지막 날 거래됐으면 지금은 정지 상태가 아님
+        halted = (group['Volume'] == 0).values
+        streak = 0
+        for v in halted[::-1]:
+            if not v:
+                break
+            streak += 1
+        halt_start_date = group.index[-streak]
+        rows.append({
+            'Code': code,
+            'Name': last_row['Name'],
+            'Close': last_row['Close'],
+            'Marcap': last_row['Marcap'],
+            'HaltStartDate': halt_start_date,
+            'HaltDays': streak,
+        })
+
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'HaltStartDate', 'HaltDays']
+    result = pd.DataFrame(rows, columns=columns)
+    if result.empty:
+        return result
+    return (
+        result.sort_values('HaltStartDate', ascending=False)
         .head(top_n)
         .reset_index(drop=True)
     )

@@ -24,8 +24,8 @@ from src.investor_profile import (  # noqa: E402
 from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
-    PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, resolve_date_range, filter_single_stocks,
-    filter_top_marcap, find_matching_stocks,
+    PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, HALT_PATTERN_KEY, resolve_date_range,
+    filter_single_stocks, filter_top_marcap, find_matching_stocks, find_halted_stocks,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -247,14 +247,17 @@ with tab5:
     if st.button(t('tab5_confirm_button', lang), type='primary'):
         start, end = resolve_date_range(end_date, months)
         with st.spinner(t('tab5_loading', lang)):
-            df = marcap_data(start, end)
+            is_halt = pattern_key == HALT_PATTERN_KEY
+            # 거래정지일은 marcap_data 기본값(include_halted=False)에서는 아예 빠지므로,
+            # "⑤ 거래정지 종목"을 찾을 때만 그 행들을 포함해서 불러온다.
+            df = marcap_data(start, end, include_halted=is_halt)
             if df.empty:
                 st.warning(t('tab5_no_data', lang))
                 st.session_state['pattern_result'] = None
             else:
                 df = filter_single_stocks(df)
                 df = filter_top_marcap(df)
-                matched = find_matching_stocks(df, pattern_key)
+                matched = find_halted_stocks(df) if is_halt else find_matching_stocks(df, pattern_key)
                 if matched.empty:
                     st.session_state['pattern_result'] = matched
                 else:
@@ -282,11 +285,15 @@ with tab5:
     else:
         start, end = st.session_state['pattern_range']
         st.caption(t('tab5_result_caption', lang, start=start.date(), end=end.date(), n=len(matched)))
+        result_key = st.session_state.get('pattern_result_key')
         show_cols = ['Name', 'Close', 'Sector', 'Marcap', 'PER']
-        if st.session_state.get('pattern_result_key') == BREAKOUT_PATTERN_KEY:
+        if result_key == BREAKOUT_PATTERN_KEY:
             show_cols.append('BreakoutReturn')
             st.caption(t('tab5_breakout_note', lang))
             st.warning(t('tab5_breakout_disclaimer', lang))
+        elif result_key == HALT_PATTERN_KEY:
+            show_cols += ['HaltStartDate', 'HaltDays']
+            st.caption(t('tab5_halt_note', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
         display_matched = matched[show_cols].copy()
@@ -298,6 +305,8 @@ with tab5:
         )
         if 'BreakoutReturn' in display_matched.columns:
             display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
+        if 'HaltStartDate' in display_matched.columns:
+            display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
         display_matched = display_matched.rename(columns=col_map)
 
         chart_col = t('tab5_chart_col', lang)

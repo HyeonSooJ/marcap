@@ -159,7 +159,8 @@ TRANSLATIONS = {
             '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 4가지 차트 모양(①우상향 '
             '②박스권 V자 반등 ③V자 반등 후 상승돌파 ④횡보 후 급등)과 비교해, 선택한 모양과 가장 '
             '비슷하게 움직인 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 2,000 '
-            '종목 이내)를 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 '
+            '종목 이내)를 찾아줍니다. ⑤거래정지 종목은 모양 비교 대신, 기준일 현재 거래정지 중인 '
+            '종목을 그대로 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 '
             '해당 칸이 비어있을 수 있습니다.'
         ),
         'en': (
@@ -167,8 +168,10 @@ TRANSLATIONS = {
             'movement over that period against 4 chart shapes (① uptrend ② range-bound V-shape '
             'rebound ③ V-shape rebound + breakout ④ sideways then sudden breakout) to find domestic '
             'common stocks (excluding preferred shares, SPACs, REITs, KONEX; limited to the top 2,000 '
-            'by market cap as of the end date) that moved most like the shape you picked. Sector/PER '
-            'are fetched separately from KRX (pykrx); those cells may be blank if that lookup fails.'
+            'by market cap as of the end date) that moved most like the shape you picked. ⑤ '
+            'Trading-halted Stocks skips shape matching and instead lists stocks currently halted as '
+            'of the end date. Sector/PER are fetched separately from KRX (pykrx); those cells may be '
+            'blank if that lookup fails.'
         ),
     },
     'tab5_end_date_label': {'ko': '① 기준일(종료일) 선택', 'en': '① Pick end date'},
@@ -217,6 +220,18 @@ TRANSLATIONS = {
         'ko': '{start} ~ {end} 기간의 종가만 표시합니다 (오늘 날짜 데이터 아님, 위 실시간 차트 링크와는 다릅니다).',
         'en': 'Shows closing prices only for {start} ~ {end} (not today — different from the live chart link above).',
     },
+    'tab5_halt_note': {
+        'ko': (
+            '⑤ 거래정지 종목은 조회 종료일 기준 거래정지 중인 종목입니다. 현재가는 정지 직전 '
+            '마지막 체결가로 고정된 값이고, 정지 시작일이 조회 시작일과 같다면 실제로는 그보다 '
+            '더 이전부터 정지 중이었을 수 있습니다(조회 범위 밖이라 정확한 시작일을 알 수 없음).'
+        ),
+        'en': (
+            '⑤ Trading-halted Stocks lists stocks currently halted as of the end date. Price is '
+            'frozen at the last trade before the halt. If the halt start date equals the query '
+            'start date, the halt may actually have begun earlier — outside the queried range.'
+        ),
+    },
     'tab5_sector_fail': {
         'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
         'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
@@ -257,6 +272,8 @@ COLUMN_LABELS = {
     'Sector': {'ko': '분야(업종)', 'en': 'Sector'},
     'PER': {'ko': 'PER', 'en': 'PER'},
     'BreakoutReturn': {'ko': '마지막 구간 상승률(%)', 'en': 'Last-segment Return (%)'},
+    'HaltStartDate': {'ko': '거래정지 시작일', 'en': 'Halt Start Date'},
+    'HaltDays': {'ko': '정지 영업일수', 'en': 'Halt Trading Days'},
 }
 
 
