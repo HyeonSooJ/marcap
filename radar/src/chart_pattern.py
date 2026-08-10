@@ -50,6 +50,13 @@ PATTERN_DEFINITIONS = {
         'label': {'ko': '⑤ 거래정지 종목', 'en': '⑤ Trading-halted Stocks'},
         'shape': None,
     },
+    # 사용자 예시(해성옵틱스, RF머트리얼즈)로 검증: 기간 중반쯤 고점을 찍고 그 이후
+    # 조회 종료일까지 계속 흘러내려 끝나는 모양. "눌림목 매수" 대상 — 아직 바닥을
+    # 다지거나 반등하지 않고 하락이 진행 중인 상태를 찾는다.
+    'rally_pullback': {
+        'label': {'ko': '⑥ 급등 후 눌림목형', 'en': '⑥ Rally then Pullback'},
+        'shape': _keypoints_to_shape([(0, 0.2), (0.55, 1.0), (1.0, 0.0)]),
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'

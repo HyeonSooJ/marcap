@@ -105,6 +105,10 @@ PATTERN_DEFINITIONS = {
         'label': '⑤ 거래정지 종목',
         'shape': None,
     },
+    'rally_pullback': {
+        'label': '⑥ 급등 후 눌림목형',
+        'shape': _keypoints_to_shape([(0, 0.2), (0.55, 1.0), (1.0, 0.0)]),
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
