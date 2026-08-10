@@ -24,8 +24,9 @@ from src.investor_profile import (  # noqa: E402
 from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
-    PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, HALT_PATTERN_KEY, resolve_date_range,
-    filter_single_stocks, filter_top_marcap, find_matching_stocks, find_halted_stocks,
+    PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, HALT_PATTERN_KEY, RALLY_PULLBACK_PATTERN_KEY,
+    resolve_date_range, filter_single_stocks, filter_top_marcap, find_matching_stocks,
+    find_halted_stocks,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -294,6 +295,8 @@ with tab5:
         elif result_key == HALT_PATTERN_KEY:
             show_cols += ['HaltStartDate', 'HaltDays']
             st.caption(t('tab5_halt_note', lang))
+        elif result_key == RALLY_PULLBACK_PATTERN_KEY:
+            st.warning(t('tab5_rally_pullback_disclaimer', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
         display_matched = matched[show_cols].copy()

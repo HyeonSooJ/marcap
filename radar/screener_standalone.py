@@ -112,6 +112,7 @@ PATTERN_DEFINITIONS = {
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
+RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
 BREAKOUT_RECENT_MONTHS = 1
 BREAKOUT_TOP_N = 100
@@ -376,6 +377,13 @@ else:
             '⑤ 거래정지 종목은 조회 종료일 기준 거래정지 중인 종목입니다. 현재가는 정지 직전 마지막 '
             '체결가로 고정된 값이고, 정지 시작일이 조회 시작일과 같다면 실제로는 그보다 더 이전부터 '
             '정지 중이었을 수 있습니다(조회 범위 밖이라 정확한 시작일을 알 수 없음).'
+        )
+    elif result_key == RALLY_PULLBACK_PATTERN_KEY:
+        st.warning(
+            '⚠️ 이 목록은 참고용 후보이며 수익을 보장하지 않습니다. 2026년 5~6월 데이터 워크포워드 '
+            '백테스트 결과, 매수 후 1개월 평균 수익률은 **-13.2%**로 무작위 선택(-15.7%)보다 근소하게 '
+            '나았을 뿐 손실이 발생했습니다. 하락장에서는 이 조건을 만족해도 계속 하락할 수 있습니다. '
+            '(다음날 상한가 적중률은 0%로, 상한가를 노리는 용도로는 맞지 않습니다.)'
         )
 
     col_labels = {

@@ -60,6 +60,7 @@ PATTERN_DEFINITIONS = {
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
+RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
 
 # sideways_breakout 패턴 전용 랭킹/표시 로직에서 쓰는 값들.
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'

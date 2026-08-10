@@ -232,6 +232,22 @@ TRANSLATIONS = {
             'start date, the halt may actually have begun earlier — outside the queried range.'
         ),
     },
+    'tab5_rally_pullback_disclaimer': {
+        'ko': (
+            '⚠️ 이 목록은 참고용 후보이며 수익을 보장하지 않습니다. 2026년 5~6월 데이터 '
+            '워크포워드 백테스트 결과, 매수 후 1개월 평균 수익률은 **-13.2%**로 무작위 선택'
+            '(-15.7%)보다 근소하게 나았을 뿐 손실이 발생했습니다. 하락장에서는 이 조건을 '
+            '만족해도 계속 하락할 수 있습니다. (다음날 상한가 적중률은 0%로, 상한가를 노리는 '
+            '용도로는 맞지 않습니다.)'
+        ),
+        'en': (
+            '⚠️ This list is for reference only and does not guarantee returns. A walk-forward '
+            'backtest on May-June 2026 data found the average 1-month return after buying was '
+            '**-13.2%**, only marginally better than a random pick (-15.7%) — still a loss. In a '
+            'declining market, stocks matching this condition can keep falling. (Next-day limit-up '
+            'hit rate was 0%, so this is not suited for chasing limit-up moves.)'
+        ),
+    },
     'tab5_sector_fail': {
         'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
         'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
