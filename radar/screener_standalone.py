@@ -109,16 +109,25 @@ PATTERN_DEFINITIONS = {
         'label': '⑥ 급등 후 눌림목형',
         'shape': _keypoints_to_shape([(0, 0.2), (0.55, 1.0), (1.0, 0.0)]),
     },
+    'today_momentum': {
+        'label': '⑦ 오늘 상한가 + 모양 필터',
+        'shape': None,
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
+TODAY_MOMENTUM_PATTERN_KEY = 'today_momentum'
+TODAY_MOMENTUM_LOOKBACK_MONTHS = 2
+TODAY_MOMENTUM_MIN_SCORE4 = 0.6
+TODAY_MOMENTUM_MIN_SCORE6 = 0.5
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
 BREAKOUT_RECENT_MONTHS = 1
 BREAKOUT_TOP_N = 100
 BREAKOUT_MIN_MARCAP = 30_000_000_000         # 시가총액 300억원 미만 제외
 BREAKOUT_MIN_RECENT_AMOUNT = 1_000_000_000   # 최근 1개월 평균 거래대금 10억원 미만 제외
 TOP_MARCAP_N = 2000
+LIMIT_UP_MIN, LIMIT_UP_MAX = 29.0, 30.5
 
 
 def resolve_date_range(end_date, months):
@@ -257,6 +266,54 @@ def find_halted_stocks(price_df, top_n=100):
     return result.sort_values('HaltStartDate', ascending=False).head(top_n).reset_index(drop=True)
 
 
+def find_today_momentum_stocks(price_df, top_n=50):
+    """조회 종료일에 실제로 상한가를 기록한 종목 중, 최근 흐름이 ④ 또는 ⑥ 모양과
+    비슷한 것만 걸러 보여준다 ("오늘 이미 상한가 간 종목 중 내일도 이어질 가능성이
+    좀 더 높은 것"을 거르는 용도. "조용한 종목이 내일 터질지" 예측이 아님)."""
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'Score4', 'Score6', 'MatchedPattern']
+    if price_df.empty:
+        return pd.DataFrame(columns=columns)
+    window_end = price_df.index.max()
+    today_df = price_df[price_df.index == window_end]
+    today_limitup = today_df[(today_df['ChangesRatio'] >= LIMIT_UP_MIN) & (today_df['ChangesRatio'] <= LIMIT_UP_MAX)]
+    if today_limitup.empty:
+        return pd.DataFrame(columns=columns)
+
+    lookback_start = window_end - pd.DateOffset(months=TODAY_MOMENTUM_LOOKBACK_MONTHS)
+    shape4 = PATTERN_DEFINITIONS[BREAKOUT_PATTERN_KEY]['shape']
+    shape6 = PATTERN_DEFINITIONS[RALLY_PULLBACK_PATTERN_KEY]['shape']
+
+    rows = []
+    for _, today_row in today_limitup.iterrows():
+        code = today_row['Code']
+        hist = price_df[
+            (price_df['Code'] == code) & (price_df.index >= lookback_start) & (price_df.index <= window_end)
+        ].sort_index()
+        if len(hist) < 20:
+            continue
+        normalized = _resample_normalize(hist['Close'].values)
+        if normalized is None:
+            continue
+        s4 = np.corrcoef(normalized, shape4)[0, 1]
+        s6 = np.corrcoef(normalized, shape6)[0, 1]
+        if np.isnan(s4):
+            s4 = -1.0
+        if np.isnan(s6):
+            s6 = -1.0
+        if s4 < TODAY_MOMENTUM_MIN_SCORE4 and s6 < TODAY_MOMENTUM_MIN_SCORE6:
+            continue
+        rows.append({
+            'Code': code, 'Name': today_row['Name'], 'Close': today_row['Close'],
+            'Marcap': today_row['Marcap'], 'Score4': s4, 'Score6': s6,
+            'MatchedPattern': '④' if s4 >= s6 else '⑥', 'BestScore': max(s4, s6),
+        })
+
+    result = pd.DataFrame(rows, columns=columns + ['BestScore'])
+    if result.empty:
+        return result[columns]
+    return result.sort_values('BestScore', ascending=False).head(top_n).reset_index(drop=True)[columns]
+
+
 # ---------------------------------------------------------------------------
 # 3. 업종/PER 조회 (sector_data.py 이식, pykrx 필요)
 # ---------------------------------------------------------------------------
@@ -305,10 +362,11 @@ def get_sector_and_per(date, force_refresh=False):
 st.set_page_config(page_title='주식 조건 검색 도구', page_icon='📐', layout='wide')
 st.title('📐 차트 모양 조건검색')
 st.markdown(
-    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 5가지 조건(①우상향 ②박스권 V자 '
-    '반등 ③V자 반등 후 상승돌파 ④횡보 후 급등 ⑤거래정지 종목)으로 찾아줍니다. 대상은 국내 보통주 '
-    '(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 2,000 종목 이내)입니다. 업종/PER은 '
-    'KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
+    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 7가지 조건(①우상향 ②박스권 V자 '
+    '반등 ③V자 반등 후 상승돌파 ④횡보 후 급등 ⑤거래정지 종목 ⑥급등 후 눌림목 ⑦오늘 상한가+모양 '
+    '필터)으로 찾아줍니다. 대상은 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 '
+    '2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 '
+    '비어있을 수 있습니다.'
 )
 
 col1, col2, col3 = st.columns(3)
@@ -323,7 +381,8 @@ pattern_key = col3.selectbox(
 )
 
 if st.button('④ 확인 — 종목 찾기', type='primary'):
-    start, end = resolve_date_range(end_date, months)
+    is_today_momentum = pattern_key == TODAY_MOMENTUM_PATTERN_KEY
+    start, end = resolve_date_range(end_date, 2) if is_today_momentum else resolve_date_range(end_date, months)
     with st.spinner('조건에 맞는 종목을 찾는 중...'):
         is_halt = pattern_key == HALT_PATTERN_KEY
         df = marcap_data(start, end, include_halted=is_halt)
@@ -333,7 +392,12 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
         else:
             df = filter_single_stocks(df)
             df = filter_top_marcap(df)
-            matched = find_halted_stocks(df) if is_halt else find_matching_stocks(df, pattern_key)
+            if is_halt:
+                matched = find_halted_stocks(df)
+            elif is_today_momentum:
+                matched = find_today_momentum_stocks(df)
+            else:
+                matched = find_matching_stocks(df, pattern_key)
             if matched.empty:
                 st.session_state['pattern_result'] = matched
             else:
@@ -356,7 +420,10 @@ matched = st.session_state.get('pattern_result')
 if matched is None:
     pass
 elif matched.empty:
-    st.info('조건에 맞는 종목을 찾지 못했습니다.')
+    if st.session_state.get('pattern_result_key') == TODAY_MOMENTUM_PATTERN_KEY:
+        st.info('선택하신 날짜에 상한가를 기록한 종목이 없어서 결과가 없습니다. 다른 날짜로 다시 시도해보세요.')
+    else:
+        st.info('조건에 맞는 종목을 찾지 못했습니다.')
 else:
     start, end = st.session_state['pattern_range']
     st.caption(f'{start.date()} ~ {end.date()} 기간, {len(matched)}개 종목 매칭')
@@ -385,11 +452,26 @@ else:
             '나았을 뿐 손실이 발생했습니다. 하락장에서는 이 조건을 만족해도 계속 하락할 수 있습니다. '
             '(다음날 상한가 적중률은 0%로, 상한가를 노리는 용도로는 맞지 않습니다.)'
         )
+    elif result_key == TODAY_MOMENTUM_PATTERN_KEY:
+        show_cols += ['MatchedPattern', 'Score4', 'Score6']
+        st.caption(
+            '⑦ 오늘 상한가 + 모양 필터는 조회 종료일 자체에 실제로 상한가를 기록한 종목만 대상으로 '
+            '합니다. ②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다.'
+        )
+        st.warning(
+            '⚠️ "다음날도 상한가 갈 확률이 높다"는 뜻이지, 보장이 아닙니다. 2026년 5~7월 실제 '
+            '상한가 647건 워크포워드 검증 결과: 상한가 종목이 다음날도 상한가를 갈 확률은 평균 '
+            '**16.7%**였는데, 최근 2개월 흐름이 ④번 모양과 상관계수 0.6 이상이면 **20.0%**'
+            '(195건), ⑥번 모양과 0.5 이상이면 **23.8%**(42건, 표본 작음)로 올라갔습니다. 여전히 '
+            '대부분(70~80%)은 다음날 상한가로 이어지지 않습니다 — 투자 조언이 아닌 참고 자료로만 '
+            '활용하세요.'
+        )
 
     col_labels = {
         'Name': '종목명', 'Close': '현재가', 'Sector': '분야(업종)', 'Marcap': '시가총액(백만원)',
         'PER': 'PER', 'BreakoutReturn': '마지막 구간 상승률(%)',
         'HaltStartDate': '거래정지 시작일', 'HaltDays': '정지 영업일수',
+        'MatchedPattern': '더 비슷한 모양', 'Score4': '④번 유사도', 'Score6': '⑥번 유사도',
     }
     display_matched = matched[show_cols].copy()
     display_matched['Close'] = display_matched['Close'].apply(lambda v: f'{v:,.0f}' if pd.notna(v) else v)
@@ -400,6 +482,9 @@ else:
         display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
     if 'HaltStartDate' in display_matched.columns:
         display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
+    for c in ('Score4', 'Score6'):
+        if c in display_matched.columns:
+            display_matched[c] = display_matched[c].round(2)
     display_matched = display_matched.rename(columns=col_labels)
 
     display_matched['실시간 차트'] = 'https://finance.naver.com/item/main.naver?code=' + matched['Code']

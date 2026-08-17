@@ -25,8 +25,8 @@ from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
     PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, HALT_PATTERN_KEY, RALLY_PULLBACK_PATTERN_KEY,
-    resolve_date_range, filter_single_stocks, filter_top_marcap, find_matching_stocks,
-    find_halted_stocks,
+    TODAY_MOMENTUM_PATTERN_KEY, resolve_date_range, filter_single_stocks, filter_top_marcap,
+    find_matching_stocks, find_halted_stocks, find_today_momentum_stocks,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -246,7 +246,11 @@ with tab5:
     )
 
     if st.button(t('tab5_confirm_button', lang), type='primary'):
-        start, end = resolve_date_range(end_date, months)
+        is_today_momentum = pattern_key == TODAY_MOMENTUM_PATTERN_KEY
+        # ⑦번은 실제 검증(최근 2개월 고정 기준)과 동일한 조건으로 계산해야 검증된
+        # 적중률(16.7%->20~30%)이 의미가 있어서, ②개월수 선택과 무관하게 항상
+        # 최근 2개월로 계산한다.
+        start, end = resolve_date_range(end_date, 2) if is_today_momentum else resolve_date_range(end_date, months)
         with st.spinner(t('tab5_loading', lang)):
             is_halt = pattern_key == HALT_PATTERN_KEY
             # 거래정지일은 marcap_data 기본값(include_halted=False)에서는 아예 빠지므로,
@@ -258,7 +262,12 @@ with tab5:
             else:
                 df = filter_single_stocks(df)
                 df = filter_top_marcap(df)
-                matched = find_halted_stocks(df) if is_halt else find_matching_stocks(df, pattern_key)
+                if is_halt:
+                    matched = find_halted_stocks(df)
+                elif is_today_momentum:
+                    matched = find_today_momentum_stocks(df)
+                else:
+                    matched = find_matching_stocks(df, pattern_key)
                 if matched.empty:
                     st.session_state['pattern_result'] = matched
                 else:
@@ -282,7 +291,10 @@ with tab5:
     if matched is None:
         pass
     elif matched.empty:
-        st.info(t('tab5_no_match', lang))
+        if st.session_state.get('pattern_result_key') == TODAY_MOMENTUM_PATTERN_KEY:
+            st.info(t('tab5_today_momentum_empty', lang))
+        else:
+            st.info(t('tab5_no_match', lang))
     else:
         start, end = st.session_state['pattern_range']
         st.caption(t('tab5_result_caption', lang, start=start.date(), end=end.date(), n=len(matched)))
@@ -297,6 +309,10 @@ with tab5:
             st.caption(t('tab5_halt_note', lang))
         elif result_key == RALLY_PULLBACK_PATTERN_KEY:
             st.warning(t('tab5_rally_pullback_disclaimer', lang))
+        elif result_key == TODAY_MOMENTUM_PATTERN_KEY:
+            show_cols += ['MatchedPattern', 'Score4', 'Score6']
+            st.caption(t('tab5_today_momentum_note', lang))
+            st.warning(t('tab5_today_momentum_disclaimer', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
         display_matched = matched[show_cols].copy()
@@ -310,6 +326,9 @@ with tab5:
             display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
         if 'HaltStartDate' in display_matched.columns:
             display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
+        for c in ('Score4', 'Score6'):
+            if c in display_matched.columns:
+                display_matched[c] = display_matched[c].round(2)
         display_matched = display_matched.rename(columns=col_map)
 
         chart_col = t('tab5_chart_col', lang)

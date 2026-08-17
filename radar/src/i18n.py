@@ -161,7 +161,9 @@ TRANSLATIONS = {
             '선택한 모양과 가장 비슷하게 움직인 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 '
             '시가총액 상위 2,000 종목 이내)를 찾아줍니다. ⑤거래정지 종목은 모양 비교 대신, 기준일 '
             '현재 거래정지 중인 종목을 그대로 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, '
-            '조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
+            '조회에 실패하면 해당 칸이 비어있을 수 있습니다. ⑦오늘 상한가 + 모양 필터는 조회 '
+            '종료일 자체에 상한가를 기록한 종목 중 ④·⑥ 모양에 가까운 것만 걸러줍니다(별도 '
+            '설명·경고 문구 있음).'
         ),
         'en': (
             "Pick an end date and a lookback period, and this compares each stock's closing-price "
@@ -171,7 +173,9 @@ TRANSLATIONS = {
             'KONEX; limited to the top 2,000 by market cap as of the end date) that moved most like '
             'the shape you picked. ⑤ Trading-halted Stocks skips shape matching and instead lists '
             'stocks currently halted as of the end date. Sector/PER are fetched separately from KRX '
-            '(pykrx); those cells may be blank if that lookup fails.'
+            '(pykrx); those cells may be blank if that lookup fails. ⑦ Today Limit-Up + Shape Filter '
+            'only keeps stocks that hit the daily limit on the end date itself and whose recent trend '
+            'resembles ④ or ⑥ (see its own caption/warning).'
         ),
     },
     'tab5_end_date_label': {'ko': '① 기준일(종료일) 선택', 'en': '① Pick end date'},
@@ -248,6 +252,42 @@ TRANSLATIONS = {
             'hit rate was 0%, so this is not suited for chasing limit-up moves.)'
         ),
     },
+    'tab5_today_momentum_note': {
+        'ko': (
+            '⑦ 오늘 상한가 + 모양 필터는 "조회 종료일 자체에 실제로 상한가를 기록한 종목"만 '
+            '대상으로 합니다. 그런 종목이 없는 날짜를 고르면 결과가 비어있는 게 정상입니다. '
+            '②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다(검증된 조건과 동일하게 '
+            '맞추기 위함).'
+        ),
+        'en': (
+            '⑦ Today Limit-Up + Shape Filter only considers stocks that actually hit the daily '
+            'limit on the end date itself. An empty result for a date with no limit-up stocks is '
+            'expected. This always uses a fixed 2-month lookback regardless of the ② months '
+            'selector, to match the validated backtest conditions exactly.'
+        ),
+    },
+    'tab5_today_momentum_empty': {
+        'ko': '선택하신 날짜에 상한가를 기록한 종목이 없어서 결과가 없습니다. 다른 날짜로 다시 시도해보세요.',
+        'en': 'No stocks hit the daily limit on the selected date, so there are no results. Try a different date.',
+    },
+    'tab5_today_momentum_disclaimer': {
+        'ko': (
+            '⚠️ "다음날도 상한가 갈 확률이 높다"는 뜻이지, 보장이 아닙니다. 2026년 5~7월 실제 '
+            '상한가 647건 워크포워드 검증 결과: 상한가 종목이 다음날도 상한가를 갈 확률은 평균 '
+            '**16.7%**였는데, 최근 2개월 흐름이 ④번 모양과 상관계수 0.6 이상이면 **20.0%**'
+            '(195건), ⑥번 모양과 0.5 이상이면 **23.8%**(42건, 표본 작음)로 올라갔습니다. 여전히 '
+            '대부분(70~80%)은 다음날 상한가로 이어지지 않습니다 — 투자 조언이 아닌 참고 자료로만 '
+            '활용하세요.'
+        ),
+        'en': (
+            '⚠️ This means "higher probability," not a guarantee. A walk-forward check on 647 '
+            'actual limit-up events (May-July 2026) found: the average next-day limit-up '
+            'continuation rate was **16.7%**, rising to **20.0%** (n=195) when the recent 2-month '
+            'trend correlated ≥0.6 with pattern ④, and **23.8%** (n=42, small sample) at ≥0.5 with '
+            'pattern ⑥. Most cases (70-80%) still do not continue — reference only, not investment '
+            'advice.'
+        ),
+    },
     'tab5_sector_fail': {
         'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
         'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
@@ -290,6 +330,9 @@ COLUMN_LABELS = {
     'BreakoutReturn': {'ko': '마지막 구간 상승률(%)', 'en': 'Last-segment Return (%)'},
     'HaltStartDate': {'ko': '거래정지 시작일', 'en': 'Halt Start Date'},
     'HaltDays': {'ko': '정지 영업일수', 'en': 'Halt Trading Days'},
+    'MatchedPattern': {'ko': '더 비슷한 모양', 'en': 'Closer Match'},
+    'Score4': {'ko': '④번 유사도', 'en': '④ Similarity'},
+    'Score6': {'ko': '⑥번 유사도', 'en': '⑥ Similarity'},
 }
 
 

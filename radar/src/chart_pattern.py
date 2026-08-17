@@ -57,10 +57,27 @@ PATTERN_DEFINITIONS = {
         'label': {'ko': '⑥ 급등 후 눌림목형', 'en': '⑥ Rally then Pullback'},
         'shape': _keypoints_to_shape([(0, 0.2), (0.55, 1.0), (1.0, 0.0)]),
     },
+    # "조용한 종목이 내일 터질지"를 예측하는 게 아니라, "오늘 이미 상한가 간 종목 중
+    # 내일도 이어질 가능성이 좀 더 높은 것"을 걸러주는 용도라 shape 상관계수 하나로
+    # 표현되지 않는다. find_matching_stocks가 아니라 find_today_momentum_stocks가
+    # 별도로 처리한다.
+    'today_momentum': {
+        'label': {'ko': '⑦ 오늘 상한가 + 모양 필터', 'en': '⑦ Today Limit-Up + Shape Filter'},
+        'shape': None,
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
+TODAY_MOMENTUM_PATTERN_KEY = 'today_momentum'
+# 실제 검증(2026년 5~7월, 조회 종료일에 상한가를 기록한 종목 647건): 다음날도
+# 상한가를 갈 확률은 평균 16.7%였는데, 최근 2개월 흐름이 ④번 모양과 상관계수
+# 0.6 이상이면 20.0%(195건), ⑥번 모양과 0.5 이상이면 23.8%(42건)로 올라갔다.
+# "조용한 종목의 다음날 급등"은 예측이 안 됐지만(다른 백테스트 참고), "오늘 이미
+# 상한가 간 종목 중 어떤 게 내일도 이어질지"는 이 조건으로 어느 정도 걸러진다.
+TODAY_MOMENTUM_LOOKBACK_MONTHS = 2
+TODAY_MOMENTUM_MIN_SCORE4 = 0.6
+TODAY_MOMENTUM_MIN_SCORE6 = 0.5
 
 # sideways_breakout 패턴 전용 랭킹/표시 로직에서 쓰는 값들.
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
@@ -294,4 +311,77 @@ def find_halted_stocks(price_df, top_n=100):
         result.sort_values('HaltStartDate', ascending=False)
         .head(top_n)
         .reset_index(drop=True)
+    )
+
+
+LIMIT_UP_MIN, LIMIT_UP_MAX = 29.0, 30.5  # 상한가(당일 종가 기준 등락률). 이 범위 밖은
+# 데이터 이상치(상장일/액면분할 등으로 등락률이 수백~수만 %로 찍히는 경우)로 본다.
+
+
+def find_today_momentum_stocks(price_df, top_n=50):
+    """조회 종료일에 실제로 상한가를 기록한 종목 중, 최근 흐름이 ④(횡보 후 급등)
+    또는 ⑥(급등 후 눌림목) 모양과 비슷한 것만 걸러 보여준다.
+
+    "아직 조용한 종목이 내일 터질지"를 예측하는 게 아니라 — 그건 실제 검증에서
+    신호를 찾지 못했다 — "오늘 이미 상한가 간 종목 중 내일도 이어질 가능성이 좀 더
+    높은 것"을 거르는 용도다. 그래서 조회 종료일 자체가 실제 상한가가 있었던
+    날짜여야 결과가 나온다(그런 날이 아니면 빈 결과).
+
+    :param price_df: marcap_data(start, end)로 불러온 DataFrame
+    :return: DataFrame [Code, Name, Close, Marcap, Score4, Score6, MatchedPattern]
+        (BestScore = max(Score4, Score6) 내림차순)
+    """
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'Score4', 'Score6', 'MatchedPattern']
+    if price_df.empty:
+        return pd.DataFrame(columns=columns)
+
+    window_end = price_df.index.max()
+    today_df = price_df[price_df.index == window_end]
+    today_limitup = today_df[
+        (today_df['ChangesRatio'] >= LIMIT_UP_MIN) & (today_df['ChangesRatio'] <= LIMIT_UP_MAX)
+    ]
+    if today_limitup.empty:
+        return pd.DataFrame(columns=columns)
+
+    lookback_start = window_end - pd.DateOffset(months=TODAY_MOMENTUM_LOOKBACK_MONTHS)
+    shape4 = PATTERN_DEFINITIONS[BREAKOUT_PATTERN_KEY]['shape']
+    shape6 = PATTERN_DEFINITIONS[RALLY_PULLBACK_PATTERN_KEY]['shape']
+
+    rows = []
+    for _, today_row in today_limitup.iterrows():
+        code = today_row['Code']
+        hist = price_df[
+            (price_df['Code'] == code) & (price_df.index >= lookback_start) & (price_df.index <= window_end)
+        ].sort_index()
+        if len(hist) < 20:
+            continue
+        normalized = _resample_normalize(hist['Close'].values)
+        if normalized is None:
+            continue
+        s4 = np.corrcoef(normalized, shape4)[0, 1]
+        s6 = np.corrcoef(normalized, shape6)[0, 1]
+        if np.isnan(s4):
+            s4 = -1.0
+        if np.isnan(s6):
+            s6 = -1.0
+        if s4 < TODAY_MOMENTUM_MIN_SCORE4 and s6 < TODAY_MOMENTUM_MIN_SCORE6:
+            continue
+        rows.append({
+            'Code': code,
+            'Name': today_row['Name'],
+            'Close': today_row['Close'],
+            'Marcap': today_row['Marcap'],
+            'Score4': s4,
+            'Score6': s6,
+            'MatchedPattern': '④' if s4 >= s6 else '⑥',
+            'BestScore': max(s4, s6),
+        })
+
+    result = pd.DataFrame(rows, columns=columns + ['BestScore'])
+    if result.empty:
+        return result[columns]
+    return (
+        result.sort_values('BestScore', ascending=False)
+        .head(top_n)
+        .reset_index(drop=True)[columns]
     )
