@@ -113,6 +113,10 @@ PATTERN_DEFINITIONS = {
         'label': '⑦ 오늘 상한가 + 모양 필터',
         'shape': None,
     },
+    'bottom_rebound': {
+        'label': '⑧ 바닥 찍고 연속 반등형',
+        'shape': None,
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
@@ -121,6 +125,13 @@ TODAY_MOMENTUM_PATTERN_KEY = 'today_momentum'
 TODAY_MOMENTUM_LOOKBACK_MONTHS = 2
 TODAY_MOMENTUM_MIN_SCORE4 = 0.6
 TODAY_MOMENTUM_MIN_SCORE6 = 0.5
+BOTTOM_REBOUND_PATTERN_KEY = 'bottom_rebound'
+BOTTOM_REBOUND_TOP_N = 100
+BOTTOM_REBOUND_SEARCH_WINDOW_FRACTION = 0.4
+BOTTOM_REBOUND_MIN_PRE_DECLINE = 30.0
+BOTTOM_REBOUND_MIN_RISE = 15.0
+BOTTOM_REBOUND_MIN_MARCAP = 30_000_000_000
+BOTTOM_REBOUND_MIN_RECENT_AMOUNT = 1_000_000_000
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
 BREAKOUT_RECENT_MONTHS = 1
 BREAKOUT_TOP_N = 100
@@ -314,6 +325,60 @@ def find_today_momentum_stocks(price_df, top_n=50):
     return result.sort_values('BestScore', ascending=False).head(top_n).reset_index(drop=True)[columns]
 
 
+def _bottom_rebound_metrics(group, search_window_fraction=BOTTOM_REBOUND_SEARCH_WINDOW_FRACTION):
+    """"바닥 찍고 연속 반등"의 저점 대비 반등률(%). 조건 미달이면 None."""
+    if len(group) < 20:
+        return None
+    if group['Marcap'].iloc[-1] < BOTTOM_REBOUND_MIN_MARCAP:
+        return None
+    if group['Amount'].tail(20).mean() < BOTTOM_REBOUND_MIN_RECENT_AMOUNT:
+        return None
+    closes = group['Close'].values
+    n = len(closes)
+    win_start = int(n * (1 - search_window_fraction))
+    search_zone = closes[win_start:]
+    low_idx = win_start + int(np.argmin(search_zone))
+    if low_idx >= n - 1:
+        return None
+    low_val = closes[low_idx]
+    if low_val <= 0:
+        return None
+    pre_low = closes[:low_idx + 1]
+    period_high = pre_low.max()
+    if period_high <= 0:
+        return None
+    pre_decline_pct = (low_val / period_high - 1) * 100
+    if pre_decline_pct > -BOTTOM_REBOUND_MIN_PRE_DECLINE:
+        return None
+    current_val = closes[-1]
+    rise_pct = (current_val / low_val - 1) * 100
+    if rise_pct < BOTTOM_REBOUND_MIN_RISE:
+        return None
+    return rise_pct
+
+
+def find_bottom_rebound_stocks(price_df, top_n=None):
+    """장기 하락 후 저점을 찍고 반등 중인 종목을 찾는다."""
+    if top_n is None:
+        top_n = BOTTOM_REBOUND_TOP_N
+    rows = []
+    for code, group in price_df.groupby('Code', sort=False):
+        group = group.sort_index()
+        rise_pct = _bottom_rebound_metrics(group)
+        if rise_pct is None:
+            continue
+        last_row = group.iloc[-1]
+        rows.append({
+            'Code': code, 'Name': last_row['Name'], 'Close': last_row['Close'],
+            'Marcap': last_row['Marcap'], 'ReboundReturn': rise_pct,
+        })
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'ReboundReturn']
+    result = pd.DataFrame(rows, columns=columns)
+    if result.empty:
+        return result
+    return result.sort_values('ReboundReturn', ascending=False).head(top_n).reset_index(drop=True)
+
+
 # ---------------------------------------------------------------------------
 # 3. 업종/PER 조회 (sector_data.py 이식, pykrx 필요)
 # ---------------------------------------------------------------------------
@@ -362,11 +427,11 @@ def get_sector_and_per(date, force_refresh=False):
 st.set_page_config(page_title='주식 조건 검색 도구', page_icon='📐', layout='wide')
 st.title('📐 차트 모양 조건검색')
 st.markdown(
-    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 7가지 조건(①우상향 ②박스권 V자 '
+    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 8가지 조건(①우상향 ②박스권 V자 '
     '반등 ③V자 반등 후 상승돌파 ④횡보 후 급등 ⑤거래정지 종목 ⑥급등 후 눌림목 ⑦오늘 상한가+모양 '
-    '필터)으로 찾아줍니다. 대상은 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 '
-    '2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 '
-    '비어있을 수 있습니다.'
+    '필터 ⑧바닥 찍고 연속 반등)으로 찾아줍니다. 대상은 국내 보통주(우선주·스팩·리츠·코넥스 제외, '
+    '기준일 시가총액 상위 2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, '
+    '조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
 )
 
 col1, col2, col3 = st.columns(3)
@@ -396,6 +461,8 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
                 matched = find_halted_stocks(df)
             elif is_today_momentum:
                 matched = find_today_momentum_stocks(df)
+            elif pattern_key == BOTTOM_REBOUND_PATTERN_KEY:
+                matched = find_bottom_rebound_stocks(df)
             else:
                 matched = find_matching_stocks(df, pattern_key)
             if matched.empty:
@@ -466,12 +533,25 @@ else:
             '대부분(70~80%)은 다음날 상한가로 이어지지 않습니다 — 투자 조언이 아닌 참고 자료로만 '
             '활용하세요.'
         )
+    elif result_key == BOTTOM_REBOUND_PATTERN_KEY:
+        show_cols.append('ReboundReturn')
+        st.caption(
+            '⑧ 바닥 찍고 연속 반등형: 저점 대비 상승률(ReboundReturn, %)을 함께 보여줍니다. 조건: '
+            '고점 대비 30% 이상 하락한 저점을 찍은 뒤, 그 저점 대비 15% 이상 반등 중인 종목(시가총액 '
+            '300억↑, 최근 1개월 평균 거래대금 10억↑).'
+        )
+        st.warning(
+            '⚠️ 이 패턴은 실제 사례 2건(코오롱티슈진, 한라캐스트)으로 조건을 설계했지만, ④·⑥·⑦번과 '
+            '달리 아직 별도의 워크포워드 백테스트 검증을 거치지 않았습니다. "다음에도 계속 오를지"에 '
+            '대한 통계적 근거가 없으니 참고 후보로만 활용하세요.'
+        )
 
     col_labels = {
         'Name': '종목명', 'Close': '현재가', 'Sector': '분야(업종)', 'Marcap': '시가총액(백만원)',
         'PER': 'PER', 'BreakoutReturn': '마지막 구간 상승률(%)',
         'HaltStartDate': '거래정지 시작일', 'HaltDays': '정지 영업일수',
         'MatchedPattern': '더 비슷한 모양', 'Score4': '④번 유사도', 'Score6': '⑥번 유사도',
+        'ReboundReturn': '저점 대비 반등률(%)',
     }
     display_matched = matched[show_cols].copy()
     display_matched['Close'] = display_matched['Close'].apply(lambda v: f'{v:,.0f}' if pd.notna(v) else v)
@@ -480,6 +560,8 @@ else:
     )
     if 'BreakoutReturn' in display_matched.columns:
         display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
+    if 'ReboundReturn' in display_matched.columns:
+        display_matched['ReboundReturn'] = display_matched['ReboundReturn'].round(1)
     if 'HaltStartDate' in display_matched.columns:
         display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
     for c in ('Score4', 'Score6'):

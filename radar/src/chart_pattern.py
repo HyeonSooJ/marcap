@@ -65,11 +65,27 @@ PATTERN_DEFINITIONS = {
         'label': {'ko': '⑦ 오늘 상한가 + 모양 필터', 'en': '⑦ Today Limit-Up + Shape Filter'},
         'shape': None,
     },
+    # 사용자 예시(코오롱티슈진, 한라캐스트)로 확인: 장기간(고점 대비 30%+) 하락하다가
+    # 최근 구간에서 저점을 찍고, 그 이후 여러 날에 걸쳐 반등 중인 상태. 전체 기간
+    # 대비 정규화한 모양 상관계수로는 하락폭이 워낙 커서 최근 반등이 잘 안 드러나
+    # (예: 88% 하락 후 97% 반등해도 정규화값은 0.12 수준), _bottom_rebound_metrics가
+    # "저점 대비 반등률"을 직접 계산하는 별도 로직으로 처리한다.
+    'bottom_rebound': {
+        'label': {'ko': '⑧ 바닥 찍고 연속 반등형', 'en': '⑧ Bottom then Rebound'},
+        'shape': None,
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
 TODAY_MOMENTUM_PATTERN_KEY = 'today_momentum'
+BOTTOM_REBOUND_PATTERN_KEY = 'bottom_rebound'
+BOTTOM_REBOUND_TOP_N = 100
+BOTTOM_REBOUND_SEARCH_WINDOW_FRACTION = 0.4  # 저점 탐색: 최근 40% 구간
+BOTTOM_REBOUND_MIN_PRE_DECLINE = 30.0        # 저점까지 최소 30% 이상 하락(장기 하락 확인용)
+BOTTOM_REBOUND_MIN_RISE = 15.0               # 저점 대비 최소 15% 이상 반등
+BOTTOM_REBOUND_MIN_MARCAP = 30_000_000_000   # 시가총액 300억원 미만 제외 (④번과 동일 기준)
+BOTTOM_REBOUND_MIN_RECENT_AMOUNT = 1_000_000_000  # 최근 1개월 평균 거래대금 10억원 미만 제외
 # 실제 검증(2026년 5~7월, 조회 종료일에 상한가를 기록한 종목 647건): 다음날도
 # 상한가를 갈 확률은 평균 16.7%였는데, 최근 2개월 흐름이 ④번 모양과 상관계수
 # 0.6 이상이면 20.0%(195건), ⑥번 모양과 0.5 이상이면 23.8%(42건)로 올라갔다.
@@ -384,4 +400,77 @@ def find_today_momentum_stocks(price_df, top_n=50):
         result.sort_values('BestScore', ascending=False)
         .head(top_n)
         .reset_index(drop=True)[columns]
+    )
+
+
+def _bottom_rebound_metrics(group, search_window_fraction=BOTTOM_REBOUND_SEARCH_WINDOW_FRACTION):
+    """"바닥 찍고 연속 반등"의 저점 대비 반등률(%)을 계산한다. 조건 미달이면 None.
+
+    최근 search_window_fraction 구간에서 저점을 찾고, 그 저점 이전까지의 고점 대비
+    얼마나 하락했었는지(장기 하락 확인)와, 저점 이후 지금까지 얼마나 반등했는지를
+    함께 확인한다. 저점이 바로 오늘이면(아직 반등이 시작 안 됨) 제외한다.
+    """
+    if len(group) < 20:
+        return None
+    if group['Marcap'].iloc[-1] < BOTTOM_REBOUND_MIN_MARCAP:
+        return None
+    if group['Amount'].tail(20).mean() < BOTTOM_REBOUND_MIN_RECENT_AMOUNT:
+        return None
+
+    closes = group['Close'].values
+    n = len(closes)
+    win_start = int(n * (1 - search_window_fraction))
+    search_zone = closes[win_start:]
+    low_idx = win_start + int(np.argmin(search_zone))
+    if low_idx >= n - 1:
+        return None  # 저점이 바로 오늘 -> 아직 반등이 시작되지 않음
+    low_val = closes[low_idx]
+    if low_val <= 0:
+        return None
+
+    pre_low = closes[:low_idx + 1]
+    period_high = pre_low.max()
+    if period_high <= 0:
+        return None
+    pre_decline_pct = (low_val / period_high - 1) * 100
+    if pre_decline_pct > -BOTTOM_REBOUND_MIN_PRE_DECLINE:
+        return None  # 저점까지의 하락폭이 부족(장기 하락이 아니었음)
+
+    current_val = closes[-1]
+    rise_pct = (current_val / low_val - 1) * 100
+    if rise_pct < BOTTOM_REBOUND_MIN_RISE:
+        return None
+    return rise_pct
+
+
+def find_bottom_rebound_stocks(price_df, top_n=None):
+    """장기 하락 후 저점을 찍고 반등 중인 종목을 찾는다.
+
+    :return: DataFrame [Code, Name, Close, Marcap, ReboundReturn] (ReboundReturn
+        = 저점 대비 현재까지 상승률(%), 내림차순)
+    """
+    if top_n is None:
+        top_n = BOTTOM_REBOUND_TOP_N
+    rows = []
+    for code, group in price_df.groupby('Code', sort=False):
+        group = group.sort_index()
+        rise_pct = _bottom_rebound_metrics(group)
+        if rise_pct is None:
+            continue
+        last_row = group.iloc[-1]
+        rows.append({
+            'Code': code,
+            'Name': last_row['Name'],
+            'Close': last_row['Close'],
+            'Marcap': last_row['Marcap'],
+            'ReboundReturn': rise_pct,
+        })
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'ReboundReturn']
+    result = pd.DataFrame(rows, columns=columns)
+    if result.empty:
+        return result
+    return (
+        result.sort_values('ReboundReturn', ascending=False)
+        .head(top_n)
+        .reset_index(drop=True)
     )

@@ -25,8 +25,9 @@ from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
     PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, HALT_PATTERN_KEY, RALLY_PULLBACK_PATTERN_KEY,
-    TODAY_MOMENTUM_PATTERN_KEY, resolve_date_range, filter_single_stocks, filter_top_marcap,
-    find_matching_stocks, find_halted_stocks, find_today_momentum_stocks,
+    TODAY_MOMENTUM_PATTERN_KEY, BOTTOM_REBOUND_PATTERN_KEY, resolve_date_range,
+    filter_single_stocks, filter_top_marcap, find_matching_stocks, find_halted_stocks,
+    find_today_momentum_stocks, find_bottom_rebound_stocks,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -266,6 +267,8 @@ with tab5:
                     matched = find_halted_stocks(df)
                 elif is_today_momentum:
                     matched = find_today_momentum_stocks(df)
+                elif pattern_key == BOTTOM_REBOUND_PATTERN_KEY:
+                    matched = find_bottom_rebound_stocks(df)
                 else:
                     matched = find_matching_stocks(df, pattern_key)
                 if matched.empty:
@@ -313,6 +316,10 @@ with tab5:
             show_cols += ['MatchedPattern', 'Score4', 'Score6']
             st.caption(t('tab5_today_momentum_note', lang))
             st.warning(t('tab5_today_momentum_disclaimer', lang))
+        elif result_key == BOTTOM_REBOUND_PATTERN_KEY:
+            show_cols.append('ReboundReturn')
+            st.caption(t('tab5_bottom_rebound_note', lang))
+            st.warning(t('tab5_bottom_rebound_disclaimer', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
         display_matched = matched[show_cols].copy()
@@ -324,6 +331,8 @@ with tab5:
         )
         if 'BreakoutReturn' in display_matched.columns:
             display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
+        if 'ReboundReturn' in display_matched.columns:
+            display_matched['ReboundReturn'] = display_matched['ReboundReturn'].round(1)
         if 'HaltStartDate' in display_matched.columns:
             display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
         for c in ('Score4', 'Score6'):

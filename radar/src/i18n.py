@@ -162,8 +162,9 @@ TRANSLATIONS = {
             '시가총액 상위 2,000 종목 이내)를 찾아줍니다. ⑤거래정지 종목은 모양 비교 대신, 기준일 '
             '현재 거래정지 중인 종목을 그대로 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, '
             '조회에 실패하면 해당 칸이 비어있을 수 있습니다. ⑦오늘 상한가 + 모양 필터는 조회 '
-            '종료일 자체에 상한가를 기록한 종목 중 ④·⑥ 모양에 가까운 것만 걸러줍니다(별도 '
-            '설명·경고 문구 있음).'
+            '종료일 자체에 상한가를 기록한 종목 중 ④·⑥ 모양에 가까운 것만 걸러줍니다. ⑧바닥 찍고 '
+            '연속 반등형은 고점 대비 30%+ 하락한 저점을 찍은 뒤 반등 중인 종목을 찾습니다(⑦·⑧ '
+            '모두 별도 설명·경고 문구 있음).'
         ),
         'en': (
             "Pick an end date and a lookback period, and this compares each stock's closing-price "
@@ -175,7 +176,8 @@ TRANSLATIONS = {
             'stocks currently halted as of the end date. Sector/PER are fetched separately from KRX '
             '(pykrx); those cells may be blank if that lookup fails. ⑦ Today Limit-Up + Shape Filter '
             'only keeps stocks that hit the daily limit on the end date itself and whose recent trend '
-            'resembles ④ or ⑥ (see its own caption/warning).'
+            'resembles ④ or ⑥. ⑧ Bottom then Rebound finds stocks rebounding after a 30%+ drop from '
+            'the period high (⑦ and ⑧ each have their own caption/warning).'
         ),
     },
     'tab5_end_date_label': {'ko': '① 기준일(종료일) 선택', 'en': '① Pick end date'},
@@ -288,6 +290,32 @@ TRANSLATIONS = {
             'advice.'
         ),
     },
+    'tab5_bottom_rebound_note': {
+        'ko': (
+            '⑧ 바닥 찍고 연속 반등형: 저점 대비 상승률(ReboundReturn, %)을 함께 보여줍니다. '
+            '조건: 조회 기간 중 고점 대비 30% 이상 하락한 저점을 찍은 뒤, 그 저점 대비 15% 이상 '
+            '반등 중인 종목(시가총액 300억↑, 최근 1개월 평균 거래대금 10억↑).'
+        ),
+        'en': (
+            '⑧ Bottom then Rebound also shows the rise (%) from the recent low (ReboundReturn). '
+            'Condition: a low at least 30% below the period high, followed by a rebound of at least '
+            '15% from that low (market cap ≥30bn KRW, ≥1bn KRW average recent monthly trading value).'
+        ),
+    },
+    'tab5_bottom_rebound_disclaimer': {
+        'ko': (
+            '⚠️ 이 패턴은 사용자가 제시한 실제 사례 2건(코오롱티슈진, 한라캐스트)으로 조건을 '
+            '설계했지만, ④·⑥·⑦번과 달리 **아직 별도의 워크포워드 백테스트 검증을 거치지 '
+            '않았습니다.** 실제로 "다음에도 계속 오를지"에 대한 통계적 근거가 없으니, 투자 '
+            '판단의 근거가 아니라 참고 후보로만 활용하세요.'
+        ),
+        'en': (
+            '⚠️ This pattern was designed from 2 real examples the user provided (코오롱티슈진, '
+            '한라캐스트), but unlike ④/⑥/⑦, it has **not yet been walk-forward backtested.** There '
+            'is no statistical evidence yet on whether these keep rising — treat as a reference '
+            'candidate list only, not investment advice.'
+        ),
+    },
     'tab5_sector_fail': {
         'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
         'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
@@ -333,6 +361,7 @@ COLUMN_LABELS = {
     'MatchedPattern': {'ko': '더 비슷한 모양', 'en': 'Closer Match'},
     'Score4': {'ko': '④번 유사도', 'en': '④ Similarity'},
     'Score6': {'ko': '⑥번 유사도', 'en': '⑥ Similarity'},
+    'ReboundReturn': {'ko': '저점 대비 반등률(%)', 'en': 'Rebound from Low (%)'},
 }
 
 
