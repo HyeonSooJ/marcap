@@ -304,16 +304,20 @@ TRANSLATIONS = {
     },
     'tab5_bottom_rebound_disclaimer': {
         'ko': (
-            '⚠️ 이 패턴은 사용자가 제시한 실제 사례 2건(코오롱티슈진, 한라캐스트)으로 조건을 '
-            '설계했지만, ④·⑥·⑦번과 달리 **아직 별도의 워크포워드 백테스트 검증을 거치지 '
-            '않았습니다.** 실제로 "다음에도 계속 오를지"에 대한 통계적 근거가 없으니, 투자 '
-            '판단의 근거가 아니라 참고 후보로만 활용하세요.'
+            '⚠️ 2026년 5~7월 데이터 워크포워드 백테스트(13회, top 20 기준) 결과: **다음날~한달 '
+            '내 상한가 적중률은 23.1%로 무작위(2.7%) 대비 약 8.5배 높았지만**, **매수 후 1개월 '
+            '평균 수익률은 -17.0%로 무작위(-8.2%)보다 오히려 나빴습니다.** 이 조건을 만족하는 '
+            '종목은 원래 계속 하락하던 종목이라, 중간에 상한가가 한 번 나와도 나머지 날의 하락이 '
+            '더 커서 전체적으로는 더 빠지는 경우가 많았습니다. "상한가가 나올 확률"은 높지만 '
+            '"한 달 보유 시 수익"은 아니니, 장기 보유가 아닌 단기 참고용으로만 활용하세요.'
         ),
         'en': (
-            '⚠️ This pattern was designed from 2 real examples the user provided (코오롱티슈진, '
-            '한라캐스트), but unlike ④/⑥/⑦, it has **not yet been walk-forward backtested.** There '
-            'is no statistical evidence yet on whether these keep rising — treat as a reference '
-            'candidate list only, not investment advice.'
+            '⚠️ A walk-forward backtest on May-July 2026 data (13 runs, top 20) found: the '
+            '**next-day-to-1-month limit-up hit rate was 23.1%, about 8.5x the random baseline '
+            '(2.7%)**, but the **average 1-month return after buying was -17.0%, actually worse '
+            'than random (-8.2%).** These stocks were already in a decline, so even one limit-up '
+            'day often was not enough to offset continued losses on other days. High "chance of a '
+            'limit-up," not "profit if held" — use for short-term reference, not long-term holding.'
         ),
     },
     'tab5_sector_fail': {
