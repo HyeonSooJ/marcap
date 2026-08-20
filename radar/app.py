@@ -24,11 +24,10 @@ from src.investor_profile import (  # noqa: E402
 from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
-    PATTERN_DEFINITIONS, BREAKOUT_PATTERN_KEY, HALT_PATTERN_KEY, RALLY_PULLBACK_PATTERN_KEY,
-    TODAY_MOMENTUM_PATTERN_KEY, BOTTOM_REBOUND_PATTERN_KEY, SUSTAINED_VOLUME_PATTERN_KEY,
+    MENU_PATTERN_KEYS, HALT_PATTERN_KEY, TODAY_MOMENTUM_PATTERN_KEY,
+    PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY,
     resolve_date_range, filter_single_stocks, filter_top_marcap, find_matching_stocks,
-    find_halted_stocks, find_today_momentum_stocks, find_bottom_rebound_stocks,
-    find_sustained_volume_stocks,
+    find_halted_stocks, find_presurge_pattern_stocks, find_limitup_continuation_stocks,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -243,20 +242,20 @@ with tab5:
     )
     months = col2.selectbox(t('tab5_months_label', lang), list(range(1, 13)), index=2, key='pattern_months')
     pattern_key = col3.selectbox(
-        t('tab5_pattern_label', lang), list(PATTERN_DEFINITIONS.keys()),
+        t('tab5_pattern_label', lang), MENU_PATTERN_KEYS,
         format_func=lambda k: pattern_label(k, lang), key='pattern_key',
     )
 
     if st.button(t('tab5_confirm_button', lang), type='primary'):
-        is_today_momentum = pattern_key == TODAY_MOMENTUM_PATTERN_KEY
-        # ⑦번은 실제 검증(최근 2개월 고정 기준)과 동일한 조건으로 계산해야 검증된
-        # 적중률(16.7%->20~30%)이 의미가 있어서, ②개월수 선택과 무관하게 항상
-        # 최근 2개월로 계산한다.
-        start, end = resolve_date_range(end_date, 2) if is_today_momentum else resolve_date_range(end_date, months)
+        # ⑥ 상한가 지속형(오늘 상한가+모양 필터 포함)은 실제 검증(최근 2개월 고정 기준)과
+        # 동일한 조건으로 계산해야 검증된 적중률이 의미가 있어서, ②개월수 선택과 무관하게
+        # 항상 최근 2개월로 계산한다.
+        use_fixed_2m = pattern_key in (TODAY_MOMENTUM_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
+        start, end = resolve_date_range(end_date, 2) if use_fixed_2m else resolve_date_range(end_date, months)
         with st.spinner(t('tab5_loading', lang)):
             is_halt = pattern_key == HALT_PATTERN_KEY
             # 거래정지일은 marcap_data 기본값(include_halted=False)에서는 아예 빠지므로,
-            # "⑤ 거래정지 종목"을 찾을 때만 그 행들을 포함해서 불러온다.
+            # "④ 거래정지 종목"을 찾을 때만 그 행들을 포함해서 불러온다.
             df = marcap_data(start, end, include_halted=is_halt)
             if df.empty:
                 st.warning(t('tab5_no_data', lang))
@@ -266,12 +265,10 @@ with tab5:
                 df = filter_top_marcap(df)
                 if is_halt:
                     matched = find_halted_stocks(df)
-                elif is_today_momentum:
-                    matched = find_today_momentum_stocks(df)
-                elif pattern_key == BOTTOM_REBOUND_PATTERN_KEY:
-                    matched = find_bottom_rebound_stocks(df)
-                elif pattern_key == SUSTAINED_VOLUME_PATTERN_KEY:
-                    matched = find_sustained_volume_stocks(df)
+                elif pattern_key == PRESURGE_PATTERN_KEY:
+                    matched = find_presurge_pattern_stocks(df)
+                elif pattern_key == LIMITUP_CONTINUATION_KEY:
+                    matched = find_limitup_continuation_stocks(df)
                 else:
                     matched = find_matching_stocks(df, pattern_key)
                 if matched.empty:
@@ -297,7 +294,7 @@ with tab5:
     if matched is None:
         pass
     elif matched.empty:
-        if st.session_state.get('pattern_result_key') == TODAY_MOMENTUM_PATTERN_KEY:
+        if st.session_state.get('pattern_result_key') == LIMITUP_CONTINUATION_KEY:
             st.info(t('tab5_today_momentum_empty', lang))
         else:
             st.info(t('tab5_no_match', lang))
@@ -306,27 +303,17 @@ with tab5:
         st.caption(t('tab5_result_caption', lang, start=start.date(), end=end.date(), n=len(matched)))
         result_key = st.session_state.get('pattern_result_key')
         show_cols = ['Name', 'Close', 'Sector', 'Marcap', 'PER']
-        if result_key == BREAKOUT_PATTERN_KEY:
-            show_cols.append('BreakoutReturn')
-            st.caption(t('tab5_breakout_note', lang))
-            st.warning(t('tab5_breakout_disclaimer', lang))
-        elif result_key == HALT_PATTERN_KEY:
+        if result_key == HALT_PATTERN_KEY:
             show_cols += ['HaltStartDate', 'HaltDays']
             st.caption(t('tab5_halt_note', lang))
-        elif result_key == RALLY_PULLBACK_PATTERN_KEY:
-            st.warning(t('tab5_rally_pullback_disclaimer', lang))
-        elif result_key == TODAY_MOMENTUM_PATTERN_KEY:
-            show_cols += ['MatchedPattern', 'Score4', 'Score6']
-            st.caption(t('tab5_today_momentum_note', lang))
-            st.warning(t('tab5_today_momentum_disclaimer', lang))
-        elif result_key == BOTTOM_REBOUND_PATTERN_KEY:
-            show_cols.append('ReboundReturn')
-            st.caption(t('tab5_bottom_rebound_note', lang))
-            st.warning(t('tab5_bottom_rebound_disclaimer', lang))
-        elif result_key == SUSTAINED_VOLUME_PATTERN_KEY:
-            show_cols.append('VolumeRatio')
-            st.caption(t('tab5_sustained_volume_note', lang))
-            st.warning(t('tab5_sustained_volume_disclaimer', lang))
+        elif result_key == PRESURGE_PATTERN_KEY:
+            show_cols.append('MatchedPattern')
+            st.caption(t('tab5_presurge_note', lang))
+            st.warning(t('tab5_presurge_disclaimer', lang))
+        elif result_key == LIMITUP_CONTINUATION_KEY:
+            show_cols.append('MatchedPattern')
+            st.caption(t('tab5_limitup_continuation_note', lang))
+            st.warning(t('tab5_limitup_continuation_disclaimer', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
         col_map['Close'] = t('tab5_price_col', lang)
         display_matched = matched[show_cols].copy()
@@ -336,17 +323,8 @@ with tab5:
         display_matched['Marcap'] = display_matched['Marcap'].apply(
             lambda v: f'{v / 1e8:,.0f}억' if pd.notna(v) else v,
         )
-        if 'BreakoutReturn' in display_matched.columns:
-            display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
-        if 'ReboundReturn' in display_matched.columns:
-            display_matched['ReboundReturn'] = display_matched['ReboundReturn'].round(1)
-        if 'VolumeRatio' in display_matched.columns:
-            display_matched['VolumeRatio'] = display_matched['VolumeRatio'].round(2)
         if 'HaltStartDate' in display_matched.columns:
             display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
-        for c in ('Score4', 'Score6'):
-            if c in display_matched.columns:
-                display_matched[c] = display_matched[c].round(2)
         display_matched = display_matched.rename(columns=col_map)
 
         chart_col = t('tab5_chart_col', lang)

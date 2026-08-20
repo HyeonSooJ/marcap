@@ -98,30 +98,50 @@ PATTERN_DEFINITIONS = {
         'shape': _keypoints_to_shape([(0, 0.4), (0.2, 0.3), (0.55, 0.0), (0.75, 0.4), (1.0, 1.0)]),
     },
     'sideways_breakout': {
-        'label': '④ 횡보 후 급등형',
+        'label': '횡보 후 급등형',
         'shape': _keypoints_to_shape([(0, 0.05), (0.4, 0.1), (0.75, 0.05), (0.8, 0.1), (1.0, 1.0)]),
     },
     'trading_halt': {
-        'label': '⑤ 거래정지 종목',
+        'label': '④ 거래정지 종목',
         'shape': None,
     },
     'rally_pullback': {
-        'label': '⑥ 급등 후 눌림목형',
+        'label': '급등 후 눌림목형',
         'shape': _keypoints_to_shape([(0, 0.2), (0.55, 1.0), (1.0, 0.0)]),
     },
     'today_momentum': {
-        'label': '⑦ 오늘 상한가 + 모양 필터',
+        'label': '오늘 상한가 + 모양 필터',
         'shape': None,
     },
     'bottom_rebound': {
-        'label': '⑧ 바닥 찍고 연속 반등형',
+        'label': '바닥 찍고 연속 반등형',
         'shape': None,
     },
     'sustained_volume': {
-        'label': '⑨ 상한가 후 거래량 지속형',
+        'label': '상한가 후 거래량 지속형',
+        'shape': None,
+    },
+    # 아래 2개는 "종류가 너무 많다"는 요청으로, 위 5개(sideways_breakout/
+    # rally_pullback/bottom_rebound/today_momentum/sustained_volume 중 성격이
+    # 비슷한 것끼리) 묶어 메뉴에는 이 2개만 노출한다(MENU_PATTERN_KEYS). 원본
+    # 5개 함수는 그대로 두고, find_presurge_pattern_stocks/
+    # find_limitup_continuation_stocks가 각각을 호출해 결과를 합친다.
+    'presurge_pattern': {
+        'label': '⑤ 급등 전조 패턴형',
+        'shape': None,
+    },
+    'limitup_continuation': {
+        'label': '⑥ 상한가 지속형',
         'shape': None,
     },
 }
+
+MENU_PATTERN_KEYS = [
+    'uptrend', 'range_v_rebound', 'v_rebound_breakout', 'trading_halt',
+    'presurge_pattern', 'limitup_continuation',
+]
+PRESURGE_PATTERN_KEY = 'presurge_pattern'
+LIMITUP_CONTINUATION_KEY = 'limitup_continuation'
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
@@ -436,6 +456,50 @@ def find_sustained_volume_stocks(price_df, top_n=None):
     return result.sort_values('VolumeRatio', ascending=False).head(top_n).reset_index(drop=True)
 
 
+def _combine_with_source_tag(frames_with_labels):
+    """[(DataFrame, 라벨), ...]을 Code/Name/Close/Marcap + MatchedPattern으로
+    합친다. 같은 종목이 여러 하위 패턴에 동시에 걸리면 먼저 나온 것 하나만 남긴다
+    (순서가 우선순위 — 더 강하게 검증된 패턴을 앞에 둔다)."""
+    frames = []
+    for df_part, label in frames_with_labels:
+        if df_part is None or df_part.empty:
+            continue
+        part = df_part[['Code', 'Name', 'Close', 'Marcap']].copy()
+        part['MatchedPattern'] = label
+        frames.append(part)
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'MatchedPattern']
+    if not frames:
+        return pd.DataFrame(columns=columns)
+    combined = pd.concat(frames, ignore_index=True)
+    return combined.drop_duplicates(subset='Code', keep='first').reset_index(drop=True)
+
+
+def find_presurge_pattern_stocks(price_df, top_n=100):
+    """횡보 후 급등형 + 바닥 찍고 연속 반등형 + 급등 후 눌림목형을 합쳐서 보여준다
+    ("급등 전조 패턴형" — 아직 상한가가 확정되지 않은, 모양만으로 추정하는 후보들)."""
+    r_sideways = find_matching_stocks(price_df, BREAKOUT_PATTERN_KEY, top_n=top_n)
+    r_rally = find_matching_stocks(price_df, RALLY_PULLBACK_PATTERN_KEY, top_n=top_n)
+    r_bottom = find_bottom_rebound_stocks(price_df, top_n=top_n)
+    labels = PATTERN_DEFINITIONS
+    return _combine_with_source_tag([
+        (r_sideways, labels[BREAKOUT_PATTERN_KEY]['label']),
+        (r_bottom, labels[BOTTOM_REBOUND_PATTERN_KEY]['label']),
+        (r_rally, labels[RALLY_PULLBACK_PATTERN_KEY]['label']),
+    ])
+
+
+def find_limitup_continuation_stocks(price_df, top_n=50):
+    """오늘 상한가+모양 필터 + 상한가 후 거래량 지속형을 합쳐서 보여준다
+    ("상한가 지속형" — 이미 상한가가 확정된 종목 중 내일 이어질 가능성이 높은 후보들)."""
+    r_today = find_today_momentum_stocks(price_df, top_n=top_n)
+    r_vol = find_sustained_volume_stocks(price_df, top_n=top_n)
+    labels = PATTERN_DEFINITIONS
+    return _combine_with_source_tag([
+        (r_vol, labels[SUSTAINED_VOLUME_PATTERN_KEY]['label']),
+        (r_today, labels[TODAY_MOMENTUM_PATTERN_KEY]['label']),
+    ])
+
+
 # ---------------------------------------------------------------------------
 # 3. 업종/PER 조회 (sector_data.py 이식, pykrx 필요)
 # ---------------------------------------------------------------------------
@@ -484,11 +548,15 @@ def get_sector_and_per(date, force_refresh=False):
 st.set_page_config(page_title='주식 조건 검색 도구', page_icon='📐', layout='wide')
 st.title('📐 차트 모양 조건검색')
 st.markdown(
-    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 9가지 조건(①우상향 ②박스권 V자 '
-    '반등 ③V자 반등 후 상승돌파 ④횡보 후 급등 ⑤거래정지 종목 ⑥급등 후 눌림목 ⑦오늘 상한가+모양 '
-    '필터 ⑧바닥 찍고 연속 반등 ⑨상한가 후 거래량 지속)으로 찾아줍니다. 대상은 국내 보통주(우선주·'
-    '스팩·리츠·코넥스 제외, 기준일 시가총액 상위 2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 '
-    '별도로 조회하며, 조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
+    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 3가지 차트 모양(①우상향 ②박스권 '
+    'V자 반등 ③V자 반등 후 상승돌파)과 비교해 찾아줍니다. ④거래정지 종목은 모양 비교 대신 기준일 '
+    '현재 거래정지 중인 종목을 그대로 찾아줍니다. ⑤급등 전조 패턴형과 ⑥상한가 지속형은 "급등주 '
+    '찾기" 관련 세부 조건들을 성격별로 묶은 메뉴입니다 — ⑤는 아직 상한가가 확정되지 않은 종목 중 '
+    '모양만으로 후보를 추정하고, ⑥은 이미 상한가를 기록한 종목 중 다음 상한가로 이어질 가능성이 '
+    '상대적으로 높은 후보를 찾습니다(어떤 세부 조건에 걸렸는지는 결과 표의 "매칭된 세부 유형" '
+    '칼럼에서 확인 가능). 대상은 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 '
+    '2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 '
+    '비어있을 수 있습니다.'
 )
 
 col1, col2, col3 = st.columns(3)
@@ -498,13 +566,13 @@ end_date = col1.date_input(
 )
 months = col2.selectbox('② 조회 개월 수', list(range(1, 13)), index=2, key='pattern_months')
 pattern_key = col3.selectbox(
-    '③ 차트 모양 선택', list(PATTERN_DEFINITIONS.keys()),
+    '③ 차트 모양 선택', MENU_PATTERN_KEYS,
     format_func=lambda k: PATTERN_DEFINITIONS[k]['label'], key='pattern_key',
 )
 
 if st.button('④ 확인 — 종목 찾기', type='primary'):
-    is_today_momentum = pattern_key == TODAY_MOMENTUM_PATTERN_KEY
-    start, end = resolve_date_range(end_date, 2) if is_today_momentum else resolve_date_range(end_date, months)
+    use_fixed_2m = pattern_key in (TODAY_MOMENTUM_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
+    start, end = resolve_date_range(end_date, 2) if use_fixed_2m else resolve_date_range(end_date, months)
     with st.spinner('조건에 맞는 종목을 찾는 중...'):
         is_halt = pattern_key == HALT_PATTERN_KEY
         df = marcap_data(start, end, include_halted=is_halt)
@@ -516,12 +584,10 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
             df = filter_top_marcap(df)
             if is_halt:
                 matched = find_halted_stocks(df)
-            elif is_today_momentum:
-                matched = find_today_momentum_stocks(df)
-            elif pattern_key == BOTTOM_REBOUND_PATTERN_KEY:
-                matched = find_bottom_rebound_stocks(df)
-            elif pattern_key == SUSTAINED_VOLUME_PATTERN_KEY:
-                matched = find_sustained_volume_stocks(df)
+            elif pattern_key == PRESURGE_PATTERN_KEY:
+                matched = find_presurge_pattern_stocks(df)
+            elif pattern_key == LIMITUP_CONTINUATION_KEY:
+                matched = find_limitup_continuation_stocks(df)
             else:
                 matched = find_matching_stocks(df, pattern_key)
             if matched.empty:
@@ -546,8 +612,8 @@ matched = st.session_state.get('pattern_result')
 if matched is None:
     pass
 elif matched.empty:
-    if st.session_state.get('pattern_result_key') == TODAY_MOMENTUM_PATTERN_KEY:
-        st.info('선택하신 날짜에 상한가를 기록한 종목이 없어서 결과가 없습니다. 다른 날짜로 다시 시도해보세요.')
+    if st.session_state.get('pattern_result_key') == LIMITUP_CONTINUATION_KEY:
+        st.info('선택하신 날짜(최근 2개월 기준) 안에 상한가를 기록한 종목이 없어서 결과가 없습니다. 다른 날짜로 다시 시도해보세요.')
     else:
         st.info('조건에 맞는 종목을 찾지 못했습니다.')
 else:
@@ -555,93 +621,59 @@ else:
     st.caption(f'{start.date()} ~ {end.date()} 기간, {len(matched)}개 종목 매칭')
     result_key = st.session_state.get('pattern_result_key')
     show_cols = ['Name', 'Close', 'Sector', 'Marcap', 'PER']
-    if result_key == BREAKOUT_PATTERN_KEY:
-        show_cols.append('BreakoutReturn')
-        st.caption('④ 횡보 후 급등형: 저점 대비 이후 고점까지의 상승률(최근 1개월 내 고점 기준)을 함께 보여줍니다.')
-        st.warning(
-            '⚠️ 이 목록은 **참고용 관심종목 후보**이며 상한가를 예측하는 것이 아닙니다. '
-            '2026년 5~6월 데이터로 워크포워드 백테스트한 결과, 다음날 상한가 적중률은 0.6%'
-            '(사실상 예측 불가), 다음날~한 달 내 상한가 적중률은 약 10%(무작위 5.2% 대비 약 2배)'
-            '였습니다. 표본이 8회뿐이라 오차범위가 크니 투자 판단의 근거가 아니라 참고 자료로만 활용하세요.'
-        )
-    elif result_key == HALT_PATTERN_KEY:
+    if result_key == HALT_PATTERN_KEY:
         show_cols += ['HaltStartDate', 'HaltDays']
         st.caption(
-            '⑤ 거래정지 종목은 조회 종료일 기준 거래정지 중인 종목입니다. 현재가는 정지 직전 마지막 '
+            '④ 거래정지 종목은 조회 종료일 기준 거래정지 중인 종목입니다. 현재가는 정지 직전 마지막 '
             '체결가로 고정된 값이고, 정지 시작일이 조회 시작일과 같다면 실제로는 그보다 더 이전부터 '
             '정지 중이었을 수 있습니다(조회 범위 밖이라 정확한 시작일을 알 수 없음).'
         )
-    elif result_key == RALLY_PULLBACK_PATTERN_KEY:
-        st.warning(
-            '⚠️ 이 목록은 참고용 후보이며 수익을 보장하지 않습니다. 2026년 5~6월 데이터 워크포워드 '
-            '백테스트 결과, 매수 후 1개월 평균 수익률은 **-13.2%**로 무작위 선택(-15.7%)보다 근소하게 '
-            '나았을 뿐 손실이 발생했습니다. 하락장에서는 이 조건을 만족해도 계속 하락할 수 있습니다. '
-            '(다음날 상한가 적중률은 0%로, 상한가를 노리는 용도로는 맞지 않습니다.)'
-        )
-    elif result_key == TODAY_MOMENTUM_PATTERN_KEY:
-        show_cols += ['MatchedPattern', 'Score4', 'Score6']
+    elif result_key == PRESURGE_PATTERN_KEY:
+        show_cols.append('MatchedPattern')
         st.caption(
-            '⑦ 오늘 상한가 + 모양 필터는 조회 종료일 자체에 실제로 상한가를 기록한 종목만 대상으로 '
-            '합니다. ②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다.'
+            '⑤ 급등 전조 패턴형은 세 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·급등 후 '
+            '눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 유형" 칼럼에서 어떤 조건에 걸렸는지 확인할 '
+            '수 있고, 한 종목이 여러 조건에 동시에 해당하면 그중 하나만 표시됩니다. 아직 상한가가 '
+            '확정되지 않은 종목 중 모양만으로 후보를 추정하는 용도입니다.'
         )
         st.warning(
-            '⚠️ "다음날도 상한가 갈 확률이 높다"는 뜻이지, 보장이 아닙니다. 2026년 5~7월 실제 '
-            '상한가 647건 워크포워드 검증 결과: 상한가 종목이 다음날도 상한가를 갈 확률은 평균 '
-            '**16.7%**였는데, 최근 2개월 흐름이 ④번 모양과 상관계수 0.6 이상이면 **20.0%**'
-            '(195건), ⑥번 모양과 0.5 이상이면 **23.8%**(42건, 표본 작음)로 올라갔습니다. 여전히 '
-            '대부분(70~80%)은 다음날 상한가로 이어지지 않습니다 — 투자 조언이 아닌 참고 자료로만 '
-            '활용하세요.'
+            '⚠️ 세 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
+            '**횡보 후 급등형**은 다음날 상한가 확률이 0.6%로 사실상 예측 불가능했고, 한 달 내로 '
+            '넓히면 약 10%(무작위 5.2%)였습니다. **바닥 찍고 연속 반등형**은 다음날~한 달 내 상한가 '
+            '확률이 23.1%로 무작위(2.7%) 대비 높았지만, 정작 매수 후 1개월 보유 수익률은 -17.0%로 '
+            '무작위(-8.2%)보다 나빴습니다. **급등 후 눌림목형**은 1개월 보유 수익률이 -13.2%로 '
+            '무작위(-15.7%)보다 근소하게 나은 수준에 그쳤습니다. 셋 다 상한가를 보장하지 않으며 '
+            '특히 "매수 후 장기 보유"에는 적합하지 않으니 참고용으로만 활용하세요.'
         )
-    elif result_key == BOTTOM_REBOUND_PATTERN_KEY:
-        show_cols.append('ReboundReturn')
+    elif result_key == LIMITUP_CONTINUATION_KEY:
+        show_cols.append('MatchedPattern')
         st.caption(
-            '⑧ 바닥 찍고 연속 반등형: 저점 대비 상승률(ReboundReturn, %)을 함께 보여줍니다. 조건: '
-            '고점 대비 30% 이상 하락한 저점을 찍은 뒤, 그 저점 대비 15% 이상 반등 중인 종목(시가총액 '
-            '300억↑, 최근 1개월 평균 거래대금 10억↑).'
+            '⑥ 상한가 지속형은 두 가지 하위 조건(오늘 상한가+모양 필터·상한가 후 거래량 지속형)을 '
+            '합쳐서 보여줍니다. 둘 다 "이미 상한가를 기록한 종목 중 다음 상한가로 이어질 가능성이 '
+            '상대적으로 높은 것"을 찾는 용도라, 최근 상한가 종목이 없으면 결과가 비어있을 수 '
+            '있습니다. ②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다.'
         )
         st.warning(
-            '⚠️ 2026년 5~7월 워크포워드 백테스트(13회, top 20) 결과: 다음날~한달 내 상한가 적중률은 '
-            '23.1%로 무작위(2.7%) 대비 약 8.5배 높았지만, 매수 후 1개월 평균 수익률은 -17.0%로 '
-            '무작위(-8.2%)보다 오히려 나빴습니다. 이 조건 종목은 원래 계속 하락하던 종목이라, 중간에 '
-            '상한가가 한 번 나와도 나머지 날의 하락이 더 커서 전체적으로는 더 빠지는 경우가 많았습니다. '
-            '"상한가가 나올 확률"은 높지만 "한 달 보유 시 수익"은 아니니 단기 참고용으로만 활용하세요.'
-        )
-    elif result_key == SUSTAINED_VOLUME_PATTERN_KEY:
-        show_cols.append('VolumeRatio')
-        st.caption(
-            '⑨ 상한가 후 거래량 지속형: 최근 10거래일 내 상한가가 있었고, 그로부터 3거래일 뒤 거래량이 '
-            '상한가 당일 대비 얼마나 남아있는지(VolumeRatio, 1.5배 이상만 표시)를 함께 보여줍니다.'
-        )
-        st.warning(
-            '⚠️ 실제 상한가 846건(2026년) 검증 결과: 3일 뒤 거래량이 상한가 당일 대비 1.5배 이상 '
-            '남아있는 종목은 2~7일 내 재상한가 확률이 31.7%로, 전체 평균(17.4%)의 약 1.8배였습니다. '
-            '반대로 "거래량이 조용히 정리되면 다시 오른다"는 가설은 데이터로 뒷받침되지 않았습니다. '
-            '다만 정확히 언제 재상한가가 올지는 알 수 없고, 투자 조언이 아닌 참고 자료입니다.'
+            '⚠️ "확률이 더 높다"는 뜻이지 보장이 아닙니다. **오늘 상한가+모양 필터**는 실제 상한가 '
+            '647건 검증 결과 다음날도 상한가 갈 확률이 평균 16.7%였고, 최근 2개월 흐름이 특정 모양과 '
+            '상관계수 0.5~0.6 이상이면 20.0~23.8%까지 올라갔습니다(여전히 대부분은 이어지지 않음). '
+            '**상한가 후 거래량 지속형**은 실제 상한가 846건 검증 결과 상한가 3일 뒤 거래량이 1.5배 '
+            '이상 유지되면 2~7일 내 재상한가 확률이 31.7%로 전체 평균(17.4%)의 약 1.8배였습니다. '
+            '두 조건 모두 투자 조언이 아닌 참고 자료입니다.'
         )
 
     col_labels = {
         'Name': '종목명', 'Close': '현재가', 'Sector': '분야(업종)', 'Marcap': '시가총액(백만원)',
-        'PER': 'PER', 'BreakoutReturn': '마지막 구간 상승률(%)',
-        'HaltStartDate': '거래정지 시작일', 'HaltDays': '정지 영업일수',
-        'MatchedPattern': '더 비슷한 모양', 'Score4': '④번 유사도', 'Score6': '⑥번 유사도',
-        'ReboundReturn': '저점 대비 반등률(%)', 'VolumeRatio': '거래량 유지비율',
+        'PER': 'PER', 'HaltStartDate': '거래정지 시작일', 'HaltDays': '정지 영업일수',
+        'MatchedPattern': '매칭된 세부 유형',
     }
     display_matched = matched[show_cols].copy()
     display_matched['Close'] = display_matched['Close'].apply(lambda v: f'{v:,.0f}' if pd.notna(v) else v)
     display_matched['Marcap'] = display_matched['Marcap'].apply(
         lambda v: f'{v / 1e8:,.0f}억' if pd.notna(v) else v,
     )
-    if 'BreakoutReturn' in display_matched.columns:
-        display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
-    if 'ReboundReturn' in display_matched.columns:
-        display_matched['ReboundReturn'] = display_matched['ReboundReturn'].round(1)
-    if 'VolumeRatio' in display_matched.columns:
-        display_matched['VolumeRatio'] = display_matched['VolumeRatio'].round(2)
     if 'HaltStartDate' in display_matched.columns:
         display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
-    for c in ('Score4', 'Score6'):
-        if c in display_matched.columns:
-            display_matched[c] = display_matched[c].round(2)
     display_matched = display_matched.rename(columns=col_labels)
 
     display_matched['실시간 차트'] = 'https://finance.naver.com/item/main.naver?code=' + matched['Code']

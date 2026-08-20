@@ -41,20 +41,20 @@ PATTERN_DEFINITIONS = {
         'shape': _keypoints_to_shape([(0, 0.4), (0.2, 0.3), (0.55, 0.0), (0.75, 0.4), (1.0, 1.0)]),
     },
     'sideways_breakout': {
-        'label': {'ko': '④ 횡보 후 급등형', 'en': '④ Sideways then Sudden Breakout'},
+        'label': {'ko': '횡보 후 급등형', 'en': 'Sideways then Sudden Breakout'},
         'shape': _keypoints_to_shape([(0, 0.05), (0.4, 0.1), (0.75, 0.05), (0.8, 0.1), (1.0, 1.0)]),
     },
     # 거래정지 종목은 "모양"이 아니라 상태(거래정지 여부)로 찾는 것이라 shape가 없다.
     # find_matching_stocks가 아니라 find_halted_stocks가 별도로 처리한다.
     'trading_halt': {
-        'label': {'ko': '⑤ 거래정지 종목', 'en': '⑤ Trading-halted Stocks'},
+        'label': {'ko': '④ 거래정지 종목', 'en': '④ Trading-halted Stocks'},
         'shape': None,
     },
     # 사용자 예시(해성옵틱스, RF머트리얼즈)로 검증: 기간 중반쯤 고점을 찍고 그 이후
     # 조회 종료일까지 계속 흘러내려 끝나는 모양. "눌림목 매수" 대상 — 아직 바닥을
     # 다지거나 반등하지 않고 하락이 진행 중인 상태를 찾는다.
     'rally_pullback': {
-        'label': {'ko': '⑥ 급등 후 눌림목형', 'en': '⑥ Rally then Pullback'},
+        'label': {'ko': '급등 후 눌림목형', 'en': 'Rally then Pullback'},
         'shape': _keypoints_to_shape([(0, 0.2), (0.55, 1.0), (1.0, 0.0)]),
     },
     # "조용한 종목이 내일 터질지"를 예측하는 게 아니라, "오늘 이미 상한가 간 종목 중
@@ -62,7 +62,7 @@ PATTERN_DEFINITIONS = {
     # 표현되지 않는다. find_matching_stocks가 아니라 find_today_momentum_stocks가
     # 별도로 처리한다.
     'today_momentum': {
-        'label': {'ko': '⑦ 오늘 상한가 + 모양 필터', 'en': '⑦ Today Limit-Up + Shape Filter'},
+        'label': {'ko': '오늘 상한가 + 모양 필터', 'en': 'Today Limit-Up + Shape Filter'},
         'shape': None,
     },
     # 사용자 예시(코오롱티슈진, 한라캐스트)로 확인: 장기간(고점 대비 30%+) 하락하다가
@@ -71,7 +71,7 @@ PATTERN_DEFINITIONS = {
     # (예: 88% 하락 후 97% 반등해도 정규화값은 0.12 수준), _bottom_rebound_metrics가
     # "저점 대비 반등률"을 직접 계산하는 별도 로직으로 처리한다.
     'bottom_rebound': {
-        'label': {'ko': '⑧ 바닥 찍고 연속 반등형', 'en': '⑧ Bottom then Rebound'},
+        'label': {'ko': '바닥 찍고 연속 반등형', 'en': 'Bottom then Rebound'},
         'shape': None,
     },
     # 사용자 가설("상한가 후 물량이 정리되면 다시 오른다")을 실제 상한가 846건으로
@@ -79,10 +79,33 @@ PATTERN_DEFINITIONS = {
     # (=거래량이 안 줄고 유지될수록) 2~7일 내 재상한가 확률이 훨씬 높았다(최상위
     # 분위 32.5% vs 최하위 분위 5.7%). find_sustained_volume_stocks가 처리한다.
     'sustained_volume': {
-        'label': {'ko': '⑨ 상한가 후 거래량 지속형', 'en': '⑨ Sustained Volume After Limit-Up'},
+        'label': {'ko': '상한가 후 거래량 지속형', 'en': 'Sustained Volume After Limit-Up'},
+        'shape': None,
+    },
+    # 아래 2개는 사용자가 "종류가 너무 많다"고 해서, 위 4개(sideways_breakout/
+    # rally_pullback/bottom_rebound/today_momentum/sustained_volume 중 성격이
+    # 비슷한 것끼리) 묶어 메뉴에는 이 2개만 노출한다(MENU_PATTERN_KEYS). 원본
+    # 5개 함수는 그대로 두고, find_presurge_pattern_stocks/
+    # find_limitup_continuation_stocks가 각각을 호출해 결과를 합친다.
+    'presurge_pattern': {
+        'label': {'ko': '⑤ 급등 전조 패턴형', 'en': '⑤ Pre-surge Pattern'},
+        'shape': None,
+    },
+    'limitup_continuation': {
+        'label': {'ko': '⑥ 상한가 지속형', 'en': '⑥ Limit-Up Continuation'},
         'shape': None,
     },
 }
+
+# 화면 드롭다운에 실제로 노출할 패턴 목록(순서대로). PATTERN_DEFINITIONS에는
+# 내부적으로 재사용되는 개별 패턴(sideways_breakout 등)도 같이 들어있지만,
+# 그건 메뉴에 안 보이고 presurge_pattern/limitup_continuation 안에서만 쓰인다.
+MENU_PATTERN_KEYS = [
+    'uptrend', 'range_v_rebound', 'v_rebound_breakout', 'trading_halt',
+    'presurge_pattern', 'limitup_continuation',
+]
+PRESURGE_PATTERN_KEY = 'presurge_pattern'
+LIMITUP_CONTINUATION_KEY = 'limitup_continuation'
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
@@ -560,3 +583,47 @@ def find_sustained_volume_stocks(price_df, top_n=None):
         .head(top_n)
         .reset_index(drop=True)
     )
+
+
+def _combine_with_source_tag(frames_with_labels):
+    """[(DataFrame, 라벨), ...]을 Code/Name/Close/Marcap + MatchedPattern으로
+    합친다. 같은 종목이 여러 하위 패턴에 동시에 걸리면 먼저 나온 것 하나만 남긴다
+    (순서가 우선순위 — 더 강하게 검증된 패턴을 앞에 둔다)."""
+    frames = []
+    for df_part, label in frames_with_labels:
+        if df_part is None or df_part.empty:
+            continue
+        part = df_part[['Code', 'Name', 'Close', 'Marcap']].copy()
+        part['MatchedPattern'] = label
+        frames.append(part)
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'MatchedPattern']
+    if not frames:
+        return pd.DataFrame(columns=columns)
+    combined = pd.concat(frames, ignore_index=True)
+    return combined.drop_duplicates(subset='Code', keep='first').reset_index(drop=True)
+
+
+def find_presurge_pattern_stocks(price_df, top_n=100):
+    """④횡보후급등형 + ⑥급등후눌림목형 + ⑧바닥찍고연속반등형을 합쳐서 보여준다
+    ("급등 전조 패턴형" — 아직 상한가가 확정되지 않은, 모양만으로 추정하는 후보들)."""
+    r_sideways = find_matching_stocks(price_df, BREAKOUT_PATTERN_KEY, top_n=top_n)
+    r_rally = find_matching_stocks(price_df, RALLY_PULLBACK_PATTERN_KEY, top_n=top_n)
+    r_bottom = find_bottom_rebound_stocks(price_df, top_n=top_n)
+    labels = PATTERN_DEFINITIONS
+    return _combine_with_source_tag([
+        (r_sideways, labels[BREAKOUT_PATTERN_KEY]['label']['ko']),
+        (r_bottom, labels[BOTTOM_REBOUND_PATTERN_KEY]['label']['ko']),
+        (r_rally, labels[RALLY_PULLBACK_PATTERN_KEY]['label']['ko']),
+    ])
+
+
+def find_limitup_continuation_stocks(price_df, top_n=50):
+    """⑦오늘상한가+모양필터 + ⑨상한가후거래량지속형을 합쳐서 보여준다
+    ("상한가 지속형" — 이미 상한가가 확정된 종목 중 내일 이어질 가능성이 높은 후보들)."""
+    r_today = find_today_momentum_stocks(price_df, top_n=top_n)
+    r_vol = find_sustained_volume_stocks(price_df, top_n=top_n)
+    labels = PATTERN_DEFINITIONS
+    return _combine_with_source_tag([
+        (r_vol, labels[SUSTAINED_VOLUME_PATTERN_KEY]['label']['ko']),
+        (r_today, labels[TODAY_MOMENTUM_PATTERN_KEY]['label']['ko']),
+    ])

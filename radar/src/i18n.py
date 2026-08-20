@@ -156,30 +156,35 @@ TRANSLATIONS = {
     'tab5_subheader': {'ko': '📐 차트 모양 조건검색', 'en': '📐 Chart Shape Screener'},
     'tab5_explain': {
         'ko': (
-            '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 5가지 차트 모양(①우상향 '
-            '②박스권 V자 반등 ③V자 반등 후 상승돌파 ④횡보 후 급등 ⑥급등 후 눌림목)과 비교해, '
-            '선택한 모양과 가장 비슷하게 움직인 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 '
-            '시가총액 상위 2,000 종목 이내)를 찾아줍니다. ⑤거래정지 종목은 모양 비교 대신, 기준일 '
-            '현재 거래정지 중인 종목을 그대로 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, '
-            '조회에 실패하면 해당 칸이 비어있을 수 있습니다. ⑦오늘 상한가 + 모양 필터는 조회 '
-            '종료일 자체에 상한가를 기록한 종목 중 ④·⑥ 모양에 가까운 것만 걸러줍니다. ⑧바닥 찍고 '
-            '연속 반등형은 고점 대비 30%+ 하락한 저점을 찍은 뒤 반등 중인 종목을 찾습니다. ⑨상한가 '
-            '후 거래량 지속형은 최근 상한가 이후에도 거래량이 안 줄고 유지되는 종목을 찾습니다 '
-            '(⑦·⑧·⑨ 모두 별도 설명·경고 문구 있음).'
+            '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 3가지 차트 모양(①우상향 '
+            '②박스권 V자 반등 ③V자 반등 후 상승돌파)과 비교해, 선택한 모양과 가장 비슷하게 움직인 '
+            '국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 2,000 종목 이내)를 '
+            '찾아줍니다. ④거래정지 종목은 모양 비교 대신, 기준일 현재 거래정지 중인 종목을 그대로 '
+            '찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 '
+            '비어있을 수 있습니다.  \n'
+            '⑤급등 전조 패턴형과 ⑥상한가 지속형은 "급등주 찾기" 관련 세부 조건들을 성격별로 묶은 '
+            '메뉴입니다. ⑤는 아직 상한가가 확정되지 않은 종목 중 횡보 후 급등형·바닥 찍고 연속 '
+            '반등형·급등 후 눌림목형 모양에 가까운 후보를, ⑥은 이미 상한가를 기록한 종목 중 오늘 '
+            '상한가+모양 필터·상한가 후 거래량 지속형 조건으로 다음 상한가로 이어질 가능성이 상대적 '
+            '으로 높은 후보를 찾습니다. 어떤 세부 조건에 걸렸는지는 결과 표의 "매칭된 세부 유형" '
+            '칼럼에서 확인할 수 있고, 각각 실제 백테스트 검증 결과에 따른 별도 설명·경고 문구가 '
+            '있습니다.'
         ),
         'en': (
             "Pick an end date and a lookback period, and this compares each stock's closing-price "
-            'movement over that period against 5 chart shapes (① uptrend ② range-bound V-shape '
-            'rebound ③ V-shape rebound + breakout ④ sideways then sudden breakout ⑥ rally then '
-            'pullback) to find domestic common stocks (excluding preferred shares, SPACs, REITs, '
-            'KONEX; limited to the top 2,000 by market cap as of the end date) that moved most like '
-            'the shape you picked. ⑤ Trading-halted Stocks skips shape matching and instead lists '
-            'stocks currently halted as of the end date. Sector/PER are fetched separately from KRX '
-            '(pykrx); those cells may be blank if that lookup fails. ⑦ Today Limit-Up + Shape Filter '
-            'only keeps stocks that hit the daily limit on the end date itself and whose recent trend '
-            'resembles ④ or ⑥. ⑧ Bottom then Rebound finds stocks rebounding after a 30%+ drop from '
-            'the period high. ⑨ Sustained Volume After Limit-Up finds stocks whose volume has not '
-            'tapered off since a recent limit-up (⑦, ⑧, ⑨ each have their own caption/warning).'
+            'movement over that period against 3 chart shapes (① uptrend ② range-bound V-shape '
+            'rebound ③ V-shape rebound + breakout) to find domestic common stocks (excluding '
+            'preferred shares, SPACs, REITs, KONEX; limited to the top 2,000 by market cap as of the '
+            'end date) that moved most like the shape you picked. ④ Trading-halted Stocks skips '
+            'shape matching and instead lists stocks currently halted as of the end date. Sector/PER '
+            'are fetched separately from KRX (pykrx); those cells may be blank if that lookup fails.  \n'
+            '⑤ Pre-surge Pattern and ⑥ Limit-Up Continuation group several "find surging stocks" '
+            'sub-conditions by character. ⑤ looks for stocks that have not yet hit the daily limit '
+            'but resemble Sideways-then-Breakout, Bottom-then-Rebound, or Rally-then-Pullback. ⑥ '
+            'looks for stocks that already hit the daily limit and are relatively more likely to hit '
+            'it again, via the Today Limit-Up + Shape Filter and Sustained Volume After Limit-Up '
+            'conditions. The "Matched Sub-type" column in the results shows which sub-condition '
+            'matched, and each has its own caption/warning based on actual backtest results.'
         ),
     },
     'tab5_end_date_label': {'ko': '① 기준일(종료일) 선택', 'en': '① Pick end date'},
@@ -194,29 +199,6 @@ TRANSLATIONS = {
         'en': '{start} ~ {end}, {n} stocks matched',
     },
     'tab5_price_col': {'ko': '현재가', 'en': 'Price'},
-    'tab5_breakout_note': {
-        'ko': '④ 횡보 후 급등형을 선택하면 저점 대비 이후 고점까지의 상승률(최근 1개월 내 고점 기준)을 함께 보여줍니다.',
-        'en': 'For ④ Sideways-then-Breakout, the rise (%) from the pre-breakout low to the subsequent high (peak within the last month) is also shown.',
-    },
-    'tab5_breakout_disclaimer': {
-        'ko': (
-            '⚠️ 이 목록은 **참고용 관심종목 후보**이며 상한가를 예측하는 것이 아닙니다. '
-            '2026년 5~6월 데이터로 워크포워드 백테스트(조회 시점까지의 데이터만 사용해 미래를 '
-            '모른다고 가정하고 검증)한 결과: 조회일 **다음날** 상한가를 간 비율은 **0.6%**로 '
-            '사실상 예측 불가능한 수준이었고, **다음날~한 달 내** 상한가를 간 비율은 **약 10%**로 '
-            '같은 후보군에서 무작위로 골랐을 때(5.2%)의 약 2배였습니다. 검증 표본이 8회뿐이라 '
-            '오차범위가 크니 투자 판단의 근거가 아니라 참고 자료로만 활용하세요.'
-        ),
-        'en': (
-            '⚠️ This list is for **reference as watchlist candidates only** — it does not predict '
-            'the daily price limit (limit-up). A walk-forward backtest on May-June 2026 data (using '
-            'only data available as of each test date, no lookahead) found: the probability of '
-            'hitting limit-up the **very next day** was **0.6%** — essentially unpredictable — while '
-            'the probability **within the following month** was **about 10%**, roughly 2x a random '
-            'pick from the same universe (5.2%). Based on only 8 test dates, so treat this as a '
-            'rough estimate, not investment advice.'
-        ),
-    },
     'tab5_chart_col': {'ko': '실시간 차트', 'en': 'Live Chart'},
     'tab5_chart_link_text': {'ko': '📈 네이버에서 보기(실시간)', 'en': '📈 Open on Naver (live)'},
     'tab5_chart_viewer_header': {
@@ -230,128 +212,89 @@ TRANSLATIONS = {
     },
     'tab5_halt_note': {
         'ko': (
-            '⑤ 거래정지 종목은 조회 종료일 기준 거래정지 중인 종목입니다. 현재가는 정지 직전 '
+            '④ 거래정지 종목은 조회 종료일 기준 거래정지 중인 종목입니다. 현재가는 정지 직전 '
             '마지막 체결가로 고정된 값이고, 정지 시작일이 조회 시작일과 같다면 실제로는 그보다 '
             '더 이전부터 정지 중이었을 수 있습니다(조회 범위 밖이라 정확한 시작일을 알 수 없음).'
         ),
         'en': (
-            '⑤ Trading-halted Stocks lists stocks currently halted as of the end date. Price is '
+            '④ Trading-halted Stocks lists stocks currently halted as of the end date. Price is '
             'frozen at the last trade before the halt. If the halt start date equals the query '
             'start date, the halt may actually have begun earlier — outside the queried range.'
         ),
     },
-    'tab5_rally_pullback_disclaimer': {
-        'ko': (
-            '⚠️ 이 목록은 참고용 후보이며 수익을 보장하지 않습니다. 2026년 5~6월 데이터 '
-            '워크포워드 백테스트 결과, 매수 후 1개월 평균 수익률은 **-13.2%**로 무작위 선택'
-            '(-15.7%)보다 근소하게 나았을 뿐 손실이 발생했습니다. 하락장에서는 이 조건을 '
-            '만족해도 계속 하락할 수 있습니다. (다음날 상한가 적중률은 0%로, 상한가를 노리는 '
-            '용도로는 맞지 않습니다.)'
-        ),
-        'en': (
-            '⚠️ This list is for reference only and does not guarantee returns. A walk-forward '
-            'backtest on May-June 2026 data found the average 1-month return after buying was '
-            '**-13.2%**, only marginally better than a random pick (-15.7%) — still a loss. In a '
-            'declining market, stocks matching this condition can keep falling. (Next-day limit-up '
-            'hit rate was 0%, so this is not suited for chasing limit-up moves.)'
-        ),
-    },
-    'tab5_today_momentum_note': {
-        'ko': (
-            '⑦ 오늘 상한가 + 모양 필터는 "조회 종료일 자체에 실제로 상한가를 기록한 종목"만 '
-            '대상으로 합니다. 그런 종목이 없는 날짜를 고르면 결과가 비어있는 게 정상입니다. '
-            '②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다(검증된 조건과 동일하게 '
-            '맞추기 위함).'
-        ),
-        'en': (
-            '⑦ Today Limit-Up + Shape Filter only considers stocks that actually hit the daily '
-            'limit on the end date itself. An empty result for a date with no limit-up stocks is '
-            'expected. This always uses a fixed 2-month lookback regardless of the ② months '
-            'selector, to match the validated backtest conditions exactly.'
-        ),
-    },
     'tab5_today_momentum_empty': {
-        'ko': '선택하신 날짜에 상한가를 기록한 종목이 없어서 결과가 없습니다. 다른 날짜로 다시 시도해보세요.',
-        'en': 'No stocks hit the daily limit on the selected date, so there are no results. Try a different date.',
+        'ko': '선택하신 날짜(최근 2개월 기준) 안에 상한가를 기록한 종목이 없어서 결과가 없습니다. 다른 날짜로 다시 시도해보세요.',
+        'en': 'No stocks hit the daily limit within the fixed 2-month window ending on the selected date, so there are no results. Try a different date.',
     },
-    'tab5_today_momentum_disclaimer': {
+    'tab5_presurge_note': {
         'ko': (
-            '⚠️ "다음날도 상한가 갈 확률이 높다"는 뜻이지, 보장이 아닙니다. 2026년 5~7월 실제 '
-            '상한가 647건 워크포워드 검증 결과: 상한가 종목이 다음날도 상한가를 갈 확률은 평균 '
-            '**16.7%**였는데, 최근 2개월 흐름이 ④번 모양과 상관계수 0.6 이상이면 **20.0%**'
-            '(195건), ⑥번 모양과 0.5 이상이면 **23.8%**(42건, 표본 작음)로 올라갔습니다. 여전히 '
-            '대부분(70~80%)은 다음날 상한가로 이어지지 않습니다 — 투자 조언이 아닌 참고 자료로만 '
-            '활용하세요.'
+            '⑤ 급등 전조 패턴형은 세 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·급등 후 '
+            '눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 유형" 칼럼에서 어떤 조건에 걸렸는지 확인할 '
+            '수 있고, 한 종목이 여러 조건에 동시에 해당하면 그중 하나만 표시됩니다. 아직 상한가가 '
+            '확정되지 않은 종목 중 모양만으로 후보를 추정하는 용도입니다.'
         ),
         'en': (
-            '⚠️ This means "higher probability," not a guarantee. A walk-forward check on 647 '
-            'actual limit-up events (May-July 2026) found: the average next-day limit-up '
-            'continuation rate was **16.7%**, rising to **20.0%** (n=195) when the recent 2-month '
-            'trend correlated ≥0.6 with pattern ④, and **23.8%** (n=42, small sample) at ≥0.5 with '
-            'pattern ⑥. Most cases (70-80%) still do not continue — reference only, not investment '
-            'advice.'
+            '⑤ Pre-surge Pattern combines three sub-conditions (Sideways-then-Breakout, '
+            'Bottom-then-Rebound, Rally-then-Pullback). The "Matched Sub-type" column shows which '
+            'condition matched; if a stock matches more than one, only one is shown. This is for '
+            'stocks that have not yet hit the daily limit — candidates estimated from chart shape '
+            'alone.'
         ),
     },
-    'tab5_bottom_rebound_note': {
+    'tab5_presurge_disclaimer': {
         'ko': (
-            '⑧ 바닥 찍고 연속 반등형: 저점 대비 상승률(ReboundReturn, %)을 함께 보여줍니다. '
-            '조건: 조회 기간 중 고점 대비 30% 이상 하락한 저점을 찍은 뒤, 그 저점 대비 15% 이상 '
-            '반등 중인 종목(시가총액 300억↑, 최근 1개월 평균 거래대금 10억↑).'
+            '⚠️ 세 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
+            '**횡보 후 급등형**은 다음날 상한가 확률이 0.6%로 사실상 예측 불가능했고, 한 달 내로 '
+            '넓히면 약 10%(무작위 5.2%)였습니다. **바닥 찍고 연속 반등형**은 다음날~한 달 내 상한가 '
+            '확률이 23.1%로 무작위(2.7%) 대비 높았지만, 정작 매수 후 1개월 보유 수익률은 -17.0%로 '
+            '무작위(-8.2%)보다 나빴습니다. **급등 후 눌림목형**은 1개월 보유 수익률이 -13.2%로 '
+            '무작위(-15.7%)보다 근소하게 나은 수준에 그쳤습니다. 셋 다 상한가를 보장하지 않으며 '
+            '특히 "매수 후 장기 보유"에는 적합하지 않으니 참고용으로만 활용하세요.'
         ),
         'en': (
-            '⑧ Bottom then Rebound also shows the rise (%) from the recent low (ReboundReturn). '
-            'Condition: a low at least 30% below the period high, followed by a rebound of at least '
-            '15% from that low (market cap ≥30bn KRW, ≥1bn KRW average recent monthly trading value).'
+            '⚠️ All three conditions were walk-forward backtested on 2026 data, with mixed results. '
+            '**Sideways-then-Breakout**: next-day limit-up probability was 0.6% (essentially '
+            'unpredictable), rising to ~10% within a month (vs. 5.2% random). '
+            '**Bottom-then-Rebound**: next-day-to-1-month limit-up probability was 23.1% (vs. 2.7% '
+            'random), but the average 1-month return after buying was -17.0%, worse than random '
+            '(-8.2%). **Rally-then-Pullback**: average 1-month return was -13.2%, only marginally '
+            'better than random (-15.7%). None of the three guarantees a limit-up, and none is '
+            'suited for buy-and-hold — reference only.'
         ),
     },
-    'tab5_bottom_rebound_disclaimer': {
+    'tab5_limitup_continuation_note': {
         'ko': (
-            '⚠️ 2026년 5~7월 데이터 워크포워드 백테스트(13회, top 20 기준) 결과: **다음날~한달 '
-            '내 상한가 적중률은 23.1%로 무작위(2.7%) 대비 약 8.5배 높았지만**, **매수 후 1개월 '
-            '평균 수익률은 -17.0%로 무작위(-8.2%)보다 오히려 나빴습니다.** 이 조건을 만족하는 '
-            '종목은 원래 계속 하락하던 종목이라, 중간에 상한가가 한 번 나와도 나머지 날의 하락이 '
-            '더 커서 전체적으로는 더 빠지는 경우가 많았습니다. "상한가가 나올 확률"은 높지만 '
-            '"한 달 보유 시 수익"은 아니니, 장기 보유가 아닌 단기 참고용으로만 활용하세요.'
+            '⑥ 상한가 지속형은 두 가지 하위 조건(오늘 상한가+모양 필터·상한가 후 거래량 지속형)을 '
+            '합쳐서 보여줍니다. 둘 다 "이미 상한가를 기록한 종목 중 다음 상한가로 이어질 가능성이 '
+            '상대적으로 높은 것"을 찾는 용도라, 최근 상한가 종목이 없으면 결과가 비어있을 수 '
+            '있습니다. ②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다(검증된 조건과 '
+            '동일하게 맞추기 위함).'
         ),
         'en': (
-            '⚠️ A walk-forward backtest on May-July 2026 data (13 runs, top 20) found: the '
-            '**next-day-to-1-month limit-up hit rate was 23.1%, about 8.5x the random baseline '
-            '(2.7%)**, but the **average 1-month return after buying was -17.0%, actually worse '
-            'than random (-8.2%).** These stocks were already in a decline, so even one limit-up '
-            'day often was not enough to offset continued losses on other days. High "chance of a '
-            'limit-up," not "profit if held" — use for short-term reference, not long-term holding.'
+            '⑥ Limit-Up Continuation combines two sub-conditions (Today Limit-Up + Shape Filter, '
+            'Sustained Volume After Limit-Up). Both look for stocks that already hit the daily limit '
+            'and are relatively more likely to hit it again — an empty result is expected if no '
+            'stock hit the limit recently. This always uses a fixed 2-month lookback regardless of '
+            'the ② months selector, to match the validated backtest conditions exactly.'
         ),
     },
-    'tab5_sustained_volume_note': {
+    'tab5_limitup_continuation_disclaimer': {
         'ko': (
-            '⑨ 상한가 후 거래량 지속형: 최근 10거래일 내 상한가가 있었고, 그로부터 3거래일 뒤 '
-            '거래량이 상한가 당일 대비 얼마나 남아있는지(VolumeRatio, 1.5배 이상만 표시)를 함께 '
-            '보여줍니다. 최근에 상한가를 기록한 종목이 없으면 결과가 비어있을 수 있습니다.'
+            '⚠️ "확률이 더 높다"는 뜻이지 보장이 아닙니다. **오늘 상한가+모양 필터**는 실제 상한가 '
+            '647건 검증 결과 다음날도 상한가 갈 확률이 평균 16.7%였고, 최근 2개월 흐름이 특정 모양과 '
+            '상관계수 0.5~0.6 이상이면 20.0~23.8%까지 올라갔습니다(여전히 대부분은 이어지지 않음). '
+            '**상한가 후 거래량 지속형**은 실제 상한가 846건 검증 결과 상한가 3일 뒤 거래량이 1.5배 '
+            '이상 유지되면 2~7일 내 재상한가 확률이 31.7%로 전체 평균(17.4%)의 약 1.8배였습니다. '
+            '두 조건 모두 투자 조언이 아닌 참고 자료입니다.'
         ),
         'en': (
-            '⑨ Sustained Volume After Limit-Up: shows stocks that hit the daily limit within the '
-            'last 10 trading days, along with VolumeRatio (volume 3 trading days after the limit-up '
-            'vs. volume on the limit-up day itself; only ≥1.5x shown). Empty results are expected if '
-            'no stock hit the limit recently.'
-        ),
-    },
-    'tab5_sustained_volume_disclaimer': {
-        'ko': (
-            '⚠️ 실제 상한가 846건(2026년) 검증 결과: 3일 뒤 거래량이 상한가 당일 대비 1.5배 이상 '
-            '남아있는(=안 줄어든) 종목은 2~7일 내 재상한가 확률이 **31.7%**로, 전체 평균(17.4%)의 '
-            '약 1.8배, 거래량이 많이 줄어든 하위 그룹(5.7%)의 약 5.5배였습니다. 반대로 "거래량이 '
-            '조용히 정리되면 다시 오른다"는 가설은 데이터로 뒷받침되지 않았습니다(오히려 반대). '
-            '다만 "2~7일 내" 확률이라 정확히 언제 재상한가가 올지는 알 수 없고, 투자 조언이 아닌 '
-            '참고 자료입니다.'
-        ),
-        'en': (
-            '⚠️ Validated on 846 real limit-up events (2026): stocks whose volume 3 days later was '
-            'still ≥1.5x the limit-up day\'s volume (i.e., not tapering off) had a **31.7%** chance '
-            'of hitting the limit again within 2-7 days — about 1.8x the overall average (17.4%) and '
-            '~5.5x the lowest-decile group (5.7%). The opposite hypothesis ("volume quietly clearing '
-            'out means it will rise again") was not supported — if anything, the reverse. Note this '
-            'is a "within 2-7 days" probability, not a specific day; reference only, not investment '
-            'advice.'
+            '⚠️ This means "higher probability," not a guarantee. **Today Limit-Up + Shape Filter**: '
+            'validated on 647 real limit-up events, the average next-day continuation rate was '
+            '16.7%, rising to 20.0-23.8% when the recent 2-month trend correlated ≥0.5-0.6 with a '
+            'specific shape (most cases still do not continue). **Sustained Volume After Limit-Up**: '
+            'validated on 846 real limit-up events, stocks whose volume stayed ≥1.5x 3 days after '
+            'the limit-up had a 31.7% chance of hitting the limit again within 2-7 days, about 1.8x '
+            'the overall average (17.4%). Both are reference only, not investment advice.'
         ),
     },
     'tab5_sector_fail': {
@@ -396,9 +339,7 @@ COLUMN_LABELS = {
     'BreakoutReturn': {'ko': '마지막 구간 상승률(%)', 'en': 'Last-segment Return (%)'},
     'HaltStartDate': {'ko': '거래정지 시작일', 'en': 'Halt Start Date'},
     'HaltDays': {'ko': '정지 영업일수', 'en': 'Halt Trading Days'},
-    'MatchedPattern': {'ko': '더 비슷한 모양', 'en': 'Closer Match'},
-    'Score4': {'ko': '④번 유사도', 'en': '④ Similarity'},
-    'Score6': {'ko': '⑥번 유사도', 'en': '⑥ Similarity'},
+    'MatchedPattern': {'ko': '매칭된 세부 유형', 'en': 'Matched Sub-type'},
     'ReboundReturn': {'ko': '저점 대비 반등률(%)', 'en': 'Rebound from Low (%)'},
     'VolumeRatio': {'ko': '거래량 유지비율', 'en': 'Volume Retention Ratio'},
 }
