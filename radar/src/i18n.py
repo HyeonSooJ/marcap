@@ -163,8 +163,9 @@ TRANSLATIONS = {
             '현재 거래정지 중인 종목을 그대로 찾아줍니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, '
             '조회에 실패하면 해당 칸이 비어있을 수 있습니다. ⑦오늘 상한가 + 모양 필터는 조회 '
             '종료일 자체에 상한가를 기록한 종목 중 ④·⑥ 모양에 가까운 것만 걸러줍니다. ⑧바닥 찍고 '
-            '연속 반등형은 고점 대비 30%+ 하락한 저점을 찍은 뒤 반등 중인 종목을 찾습니다(⑦·⑧ '
-            '모두 별도 설명·경고 문구 있음).'
+            '연속 반등형은 고점 대비 30%+ 하락한 저점을 찍은 뒤 반등 중인 종목을 찾습니다. ⑨상한가 '
+            '후 거래량 지속형은 최근 상한가 이후에도 거래량이 안 줄고 유지되는 종목을 찾습니다 '
+            '(⑦·⑧·⑨ 모두 별도 설명·경고 문구 있음).'
         ),
         'en': (
             "Pick an end date and a lookback period, and this compares each stock's closing-price "
@@ -177,7 +178,8 @@ TRANSLATIONS = {
             '(pykrx); those cells may be blank if that lookup fails. ⑦ Today Limit-Up + Shape Filter '
             'only keeps stocks that hit the daily limit on the end date itself and whose recent trend '
             'resembles ④ or ⑥. ⑧ Bottom then Rebound finds stocks rebounding after a 30%+ drop from '
-            'the period high (⑦ and ⑧ each have their own caption/warning).'
+            'the period high. ⑨ Sustained Volume After Limit-Up finds stocks whose volume has not '
+            'tapered off since a recent limit-up (⑦, ⑧, ⑨ each have their own caption/warning).'
         ),
     },
     'tab5_end_date_label': {'ko': '① 기준일(종료일) 선택', 'en': '① Pick end date'},
@@ -320,6 +322,38 @@ TRANSLATIONS = {
             'limit-up," not "profit if held" — use for short-term reference, not long-term holding.'
         ),
     },
+    'tab5_sustained_volume_note': {
+        'ko': (
+            '⑨ 상한가 후 거래량 지속형: 최근 10거래일 내 상한가가 있었고, 그로부터 3거래일 뒤 '
+            '거래량이 상한가 당일 대비 얼마나 남아있는지(VolumeRatio, 1.5배 이상만 표시)를 함께 '
+            '보여줍니다. 최근에 상한가를 기록한 종목이 없으면 결과가 비어있을 수 있습니다.'
+        ),
+        'en': (
+            '⑨ Sustained Volume After Limit-Up: shows stocks that hit the daily limit within the '
+            'last 10 trading days, along with VolumeRatio (volume 3 trading days after the limit-up '
+            'vs. volume on the limit-up day itself; only ≥1.5x shown). Empty results are expected if '
+            'no stock hit the limit recently.'
+        ),
+    },
+    'tab5_sustained_volume_disclaimer': {
+        'ko': (
+            '⚠️ 실제 상한가 846건(2026년) 검증 결과: 3일 뒤 거래량이 상한가 당일 대비 1.5배 이상 '
+            '남아있는(=안 줄어든) 종목은 2~7일 내 재상한가 확률이 **31.7%**로, 전체 평균(17.4%)의 '
+            '약 1.8배, 거래량이 많이 줄어든 하위 그룹(5.7%)의 약 5.5배였습니다. 반대로 "거래량이 '
+            '조용히 정리되면 다시 오른다"는 가설은 데이터로 뒷받침되지 않았습니다(오히려 반대). '
+            '다만 "2~7일 내" 확률이라 정확히 언제 재상한가가 올지는 알 수 없고, 투자 조언이 아닌 '
+            '참고 자료입니다.'
+        ),
+        'en': (
+            '⚠️ Validated on 846 real limit-up events (2026): stocks whose volume 3 days later was '
+            'still ≥1.5x the limit-up day\'s volume (i.e., not tapering off) had a **31.7%** chance '
+            'of hitting the limit again within 2-7 days — about 1.8x the overall average (17.4%) and '
+            '~5.5x the lowest-decile group (5.7%). The opposite hypothesis ("volume quietly clearing '
+            'out means it will rise again") was not supported — if anything, the reverse. Note this '
+            'is a "within 2-7 days" probability, not a specific day; reference only, not investment '
+            'advice.'
+        ),
+    },
     'tab5_sector_fail': {
         'ko': '업종/PER 조회에 실패했습니다 (KRX 접속 불가 등). 종목/현재가/시가총액만 표시합니다: {error}',
         'en': 'Sector/PER lookup failed (e.g. KRX unreachable). Showing name/price/market cap only: {error}',
@@ -366,6 +400,7 @@ COLUMN_LABELS = {
     'Score4': {'ko': '④번 유사도', 'en': '④ Similarity'},
     'Score6': {'ko': '⑥번 유사도', 'en': '⑥ Similarity'},
     'ReboundReturn': {'ko': '저점 대비 반등률(%)', 'en': 'Rebound from Low (%)'},
+    'VolumeRatio': {'ko': '거래량 유지비율', 'en': 'Volume Retention Ratio'},
 }
 
 

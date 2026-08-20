@@ -74,12 +74,28 @@ PATTERN_DEFINITIONS = {
         'label': {'ko': '⑧ 바닥 찍고 연속 반등형', 'en': '⑧ Bottom then Rebound'},
         'shape': None,
     },
+    # 사용자 가설("상한가 후 물량이 정리되면 다시 오른다")을 실제 상한가 846건으로
+    # 검증했더니 정반대였다: 상한가 3일 뒤 거래량이 스파이크 당일 대비 많이 남아있을수록
+    # (=거래량이 안 줄고 유지될수록) 2~7일 내 재상한가 확률이 훨씬 높았다(최상위
+    # 분위 32.5% vs 최하위 분위 5.7%). find_sustained_volume_stocks가 처리한다.
+    'sustained_volume': {
+        'label': {'ko': '⑨ 상한가 후 거래량 지속형', 'en': '⑨ Sustained Volume After Limit-Up'},
+        'shape': None,
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
 TODAY_MOMENTUM_PATTERN_KEY = 'today_momentum'
 BOTTOM_REBOUND_PATTERN_KEY = 'bottom_rebound'
+SUSTAINED_VOLUME_PATTERN_KEY = 'sustained_volume'
+SUSTAINED_VOLUME_TOP_N = 50
+SUSTAINED_VOLUME_LOOKBACK_DAYS = 10  # 최근 며칠 이내의 상한가만 탐색 대상으로 삼음
+SUSTAINED_VOLUME_CONFIRM_DAYS = 3    # 상한가 후 며칠 뒤 거래량을 비교할지
+# 실제 검증(2026년 상한가 846건): 상한가 3일 뒤 거래량 / 상한가 당일 거래량 비율이
+# 1.5 이상인 종목의 2~7일 내 재상한가 확률은 31.7%(243건) — 전체 평균 17.4%의
+# 약 1.8배, 최하위 분위(0.27 미만) 대비 약 5.5배.
+SUSTAINED_VOLUME_MIN_RATIO = 1.5
 BOTTOM_REBOUND_TOP_N = 100
 BOTTOM_REBOUND_SEARCH_WINDOW_FRACTION = 0.4  # 저점 탐색: 최근 40% 구간
 BOTTOM_REBOUND_MIN_PRE_DECLINE = 30.0        # 저점까지 최소 30% 이상 하락(장기 하락 확인용)
@@ -471,6 +487,76 @@ def find_bottom_rebound_stocks(price_df, top_n=None):
         return result
     return (
         result.sort_values('ReboundReturn', ascending=False)
+        .head(top_n)
+        .reset_index(drop=True)
+    )
+
+
+def _sustained_volume_metrics(group):
+    """가장 최근 상한가 이후 SUSTAINED_VOLUME_CONFIRM_DAYS일째 거래량이 상한가
+    당일 대비 얼마나 남아있는지(비율)를 계산한다. 조건 미달이면 None.
+
+    최근 SUSTAINED_VOLUME_LOOKBACK_DAYS 거래일 안에 상한가가 있고, 그 이후
+    SUSTAINED_VOLUME_CONFIRM_DAYS일치 데이터가 이미 존재해야(즉 오늘 막 터진
+    상한가는 아직 판단 불가) 계산 가능하다.
+    """
+    n = len(group)
+    if n < SUSTAINED_VOLUME_LOOKBACK_DAYS + SUSTAINED_VOLUME_CONFIRM_DAYS + 1:
+        return None
+    chg = group['ChangesRatio'].values
+    vol = group['Volume'].values
+
+    # 오늘(마지막 행) 기준 SUSTAINED_VOLUME_CONFIRM_DAYS일 전까지의 구간에서
+    # 가장 최근 상한가를 찾는다(그래야 그 이후 CONFIRM_DAYS일치 데이터가 존재).
+    search_end = n - 1 - SUSTAINED_VOLUME_CONFIRM_DAYS
+    search_start = max(0, n - 1 - SUSTAINED_VOLUME_LOOKBACK_DAYS)
+    spike_idx = None
+    for i in range(search_end, search_start - 1, -1):
+        if LIMIT_UP_MIN <= chg[i] <= LIMIT_UP_MAX:
+            spike_idx = i
+            break
+    if spike_idx is None:
+        return None
+
+    spike_vol = vol[spike_idx]
+    if spike_vol <= 0:
+        return None
+    confirm_vol = vol[spike_idx + SUSTAINED_VOLUME_CONFIRM_DAYS]
+    ratio = confirm_vol / spike_vol
+    if ratio < SUSTAINED_VOLUME_MIN_RATIO:
+        return None
+    return ratio
+
+
+def find_sustained_volume_stocks(price_df, top_n=None):
+    """최근 상한가를 기록했고, 그 이후 거래량이 계속 유지(감소하지 않음)되고
+    있는 종목을 찾는다.
+
+    :return: DataFrame [Code, Name, Close, Marcap, VolumeRatio] (VolumeRatio =
+        상한가 CONFIRM_DAYS일 뒤 거래량 / 상한가 당일 거래량, 내림차순)
+    """
+    if top_n is None:
+        top_n = SUSTAINED_VOLUME_TOP_N
+    rows = []
+    for code, group in price_df.groupby('Code', sort=False):
+        group = group.sort_index()
+        ratio = _sustained_volume_metrics(group)
+        if ratio is None:
+            continue
+        last_row = group.iloc[-1]
+        rows.append({
+            'Code': code,
+            'Name': last_row['Name'],
+            'Close': last_row['Close'],
+            'Marcap': last_row['Marcap'],
+            'VolumeRatio': ratio,
+        })
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'VolumeRatio']
+    result = pd.DataFrame(rows, columns=columns)
+    if result.empty:
+        return result
+    return (
+        result.sort_values('VolumeRatio', ascending=False)
         .head(top_n)
         .reset_index(drop=True)
     )

@@ -117,6 +117,10 @@ PATTERN_DEFINITIONS = {
         'label': '⑧ 바닥 찍고 연속 반등형',
         'shape': None,
     },
+    'sustained_volume': {
+        'label': '⑨ 상한가 후 거래량 지속형',
+        'shape': None,
+    },
 }
 
 HALT_PATTERN_KEY = 'trading_halt'
@@ -132,6 +136,11 @@ BOTTOM_REBOUND_MIN_PRE_DECLINE = 30.0
 BOTTOM_REBOUND_MIN_RISE = 15.0
 BOTTOM_REBOUND_MIN_MARCAP = 30_000_000_000
 BOTTOM_REBOUND_MIN_RECENT_AMOUNT = 1_000_000_000
+SUSTAINED_VOLUME_PATTERN_KEY = 'sustained_volume'
+SUSTAINED_VOLUME_TOP_N = 50
+SUSTAINED_VOLUME_LOOKBACK_DAYS = 10
+SUSTAINED_VOLUME_CONFIRM_DAYS = 3
+SUSTAINED_VOLUME_MIN_RATIO = 1.5
 BREAKOUT_PATTERN_KEY = 'sideways_breakout'
 BREAKOUT_RECENT_MONTHS = 1
 BREAKOUT_TOP_N = 100
@@ -379,6 +388,54 @@ def find_bottom_rebound_stocks(price_df, top_n=None):
     return result.sort_values('ReboundReturn', ascending=False).head(top_n).reset_index(drop=True)
 
 
+def _sustained_volume_metrics(group):
+    """가장 최근 상한가 후 CONFIRM_DAYS일째 거래량이 상한가 당일 대비 얼마나
+    남아있는지(비율). 조건 미달이면 None."""
+    n = len(group)
+    if n < SUSTAINED_VOLUME_LOOKBACK_DAYS + SUSTAINED_VOLUME_CONFIRM_DAYS + 1:
+        return None
+    chg = group['ChangesRatio'].values
+    vol = group['Volume'].values
+    search_end = n - 1 - SUSTAINED_VOLUME_CONFIRM_DAYS
+    search_start = max(0, n - 1 - SUSTAINED_VOLUME_LOOKBACK_DAYS)
+    spike_idx = None
+    for i in range(search_end, search_start - 1, -1):
+        if LIMIT_UP_MIN <= chg[i] <= LIMIT_UP_MAX:
+            spike_idx = i
+            break
+    if spike_idx is None:
+        return None
+    spike_vol = vol[spike_idx]
+    if spike_vol <= 0:
+        return None
+    ratio = vol[spike_idx + SUSTAINED_VOLUME_CONFIRM_DAYS] / spike_vol
+    if ratio < SUSTAINED_VOLUME_MIN_RATIO:
+        return None
+    return ratio
+
+
+def find_sustained_volume_stocks(price_df, top_n=None):
+    """최근 상한가를 기록했고 그 이후 거래량이 계속 유지되는 종목을 찾는다."""
+    if top_n is None:
+        top_n = SUSTAINED_VOLUME_TOP_N
+    rows = []
+    for code, group in price_df.groupby('Code', sort=False):
+        group = group.sort_index()
+        ratio = _sustained_volume_metrics(group)
+        if ratio is None:
+            continue
+        last_row = group.iloc[-1]
+        rows.append({
+            'Code': code, 'Name': last_row['Name'], 'Close': last_row['Close'],
+            'Marcap': last_row['Marcap'], 'VolumeRatio': ratio,
+        })
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'VolumeRatio']
+    result = pd.DataFrame(rows, columns=columns)
+    if result.empty:
+        return result
+    return result.sort_values('VolumeRatio', ascending=False).head(top_n).reset_index(drop=True)
+
+
 # ---------------------------------------------------------------------------
 # 3. 업종/PER 조회 (sector_data.py 이식, pykrx 필요)
 # ---------------------------------------------------------------------------
@@ -427,11 +484,11 @@ def get_sector_and_per(date, force_refresh=False):
 st.set_page_config(page_title='주식 조건 검색 도구', page_icon='📐', layout='wide')
 st.title('📐 차트 모양 조건검색')
 st.markdown(
-    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 8가지 조건(①우상향 ②박스권 V자 '
+    '기준일과 조회 개월 수를 고르면 그 기간 동안의 종가 흐름을 9가지 조건(①우상향 ②박스권 V자 '
     '반등 ③V자 반등 후 상승돌파 ④횡보 후 급등 ⑤거래정지 종목 ⑥급등 후 눌림목 ⑦오늘 상한가+모양 '
-    '필터 ⑧바닥 찍고 연속 반등)으로 찾아줍니다. 대상은 국내 보통주(우선주·스팩·리츠·코넥스 제외, '
-    '기준일 시가총액 상위 2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, '
-    '조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
+    '필터 ⑧바닥 찍고 연속 반등 ⑨상한가 후 거래량 지속)으로 찾아줍니다. 대상은 국내 보통주(우선주·'
+    '스팩·리츠·코넥스 제외, 기준일 시가총액 상위 2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 '
+    '별도로 조회하며, 조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
 )
 
 col1, col2, col3 = st.columns(3)
@@ -463,6 +520,8 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
                 matched = find_today_momentum_stocks(df)
             elif pattern_key == BOTTOM_REBOUND_PATTERN_KEY:
                 matched = find_bottom_rebound_stocks(df)
+            elif pattern_key == SUSTAINED_VOLUME_PATTERN_KEY:
+                matched = find_sustained_volume_stocks(df)
             else:
                 matched = find_matching_stocks(df, pattern_key)
             if matched.empty:
@@ -547,13 +606,25 @@ else:
             '상한가가 한 번 나와도 나머지 날의 하락이 더 커서 전체적으로는 더 빠지는 경우가 많았습니다. '
             '"상한가가 나올 확률"은 높지만 "한 달 보유 시 수익"은 아니니 단기 참고용으로만 활용하세요.'
         )
+    elif result_key == SUSTAINED_VOLUME_PATTERN_KEY:
+        show_cols.append('VolumeRatio')
+        st.caption(
+            '⑨ 상한가 후 거래량 지속형: 최근 10거래일 내 상한가가 있었고, 그로부터 3거래일 뒤 거래량이 '
+            '상한가 당일 대비 얼마나 남아있는지(VolumeRatio, 1.5배 이상만 표시)를 함께 보여줍니다.'
+        )
+        st.warning(
+            '⚠️ 실제 상한가 846건(2026년) 검증 결과: 3일 뒤 거래량이 상한가 당일 대비 1.5배 이상 '
+            '남아있는 종목은 2~7일 내 재상한가 확률이 31.7%로, 전체 평균(17.4%)의 약 1.8배였습니다. '
+            '반대로 "거래량이 조용히 정리되면 다시 오른다"는 가설은 데이터로 뒷받침되지 않았습니다. '
+            '다만 정확히 언제 재상한가가 올지는 알 수 없고, 투자 조언이 아닌 참고 자료입니다.'
+        )
 
     col_labels = {
         'Name': '종목명', 'Close': '현재가', 'Sector': '분야(업종)', 'Marcap': '시가총액(백만원)',
         'PER': 'PER', 'BreakoutReturn': '마지막 구간 상승률(%)',
         'HaltStartDate': '거래정지 시작일', 'HaltDays': '정지 영업일수',
         'MatchedPattern': '더 비슷한 모양', 'Score4': '④번 유사도', 'Score6': '⑥번 유사도',
-        'ReboundReturn': '저점 대비 반등률(%)',
+        'ReboundReturn': '저점 대비 반등률(%)', 'VolumeRatio': '거래량 유지비율',
     }
     display_matched = matched[show_cols].copy()
     display_matched['Close'] = display_matched['Close'].apply(lambda v: f'{v:,.0f}' if pd.notna(v) else v)
@@ -564,6 +635,8 @@ else:
         display_matched['BreakoutReturn'] = display_matched['BreakoutReturn'].round(1)
     if 'ReboundReturn' in display_matched.columns:
         display_matched['ReboundReturn'] = display_matched['ReboundReturn'].round(1)
+    if 'VolumeRatio' in display_matched.columns:
+        display_matched['VolumeRatio'] = display_matched['VolumeRatio'].round(2)
     if 'HaltStartDate' in display_matched.columns:
         display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
     for c in ('Score4', 'Score6'):
