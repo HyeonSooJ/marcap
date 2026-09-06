@@ -121,10 +121,14 @@ PATTERN_DEFINITIONS = {
         'label': '상한가 후 거래량 지속형',
         'shape': None,
     },
-    # 아래 2개는 "종류가 너무 많다"는 요청으로, 위 5개(sideways_breakout/
-    # rally_pullback/bottom_rebound/today_momentum/sustained_volume 중 성격이
-    # 비슷한 것끼리) 묶어 메뉴에는 이 2개만 노출한다(MENU_PATTERN_KEYS). 원본
-    # 5개 함수는 그대로 두고, find_presurge_pattern_stocks/
+    'recent_pullback': {
+        'label': '최근 눌림목 후 재상승형',
+        'shape': None,
+    },
+    # 아래 2개는 "종류가 너무 많다"는 요청으로, 위 6개(sideways_breakout/
+    # rally_pullback/bottom_rebound/today_momentum/sustained_volume/recent_pullback
+    # 중 성격이 비슷한 것끼리) 묶어 메뉴에는 이 2개만 노출한다(MENU_PATTERN_KEYS).
+    # 원본 6개 함수는 그대로 두고, find_presurge_pattern_stocks/
     # find_limitup_continuation_stocks가 각각을 호출해 결과를 합친다.
     'presurge_pattern': {
         'label': '⑤ 급등 전조 패턴형',
@@ -142,6 +146,24 @@ MENU_PATTERN_KEYS = [
 ]
 PRESURGE_PATTERN_KEY = 'presurge_pattern'
 LIMITUP_CONTINUATION_KEY = 'limitup_continuation'
+
+# ⑤⑥ 두 메뉴는 "급등주 찾기"가 목적이라 다른 메뉴(①~④)보다 넓은 종목군을 봐야
+# 한다. 실제 사례(2026-09-04 급등: TPC로보틱스/E8/KS인더스트리/원익홀딩스)를
+# 검증해보니 E8(시총 87억)·KS인더스트리(시총 83억)는 시총 순위 2000위 밖이라
+# 애초에 검색 대상에도 못 들어가고 있었다. 관리종목/투자주의환기종목 등 KRX
+# 공식 위험 지정 종목도 급등주에 자주 등장해서(E8=관리종목, KS인더스트리=
+# 투자주의환기종목) 제외하지 않고 대신 결과 표에 위험 표시를 단다.
+SURGE_TOP_MARCAP_N = 3000
+SURGE_MIN_MARCAP = 5_000_000_000
+SURGE_MIN_RECENT_AMOUNT = 100_000_000
+RISK_DEPT_KEYWORDS = ['관리종목', '투자주의환기종목', '투자경고종목', '투자위험종목', '거래정지']
+
+RECENT_PULLBACK_PATTERN_KEY = 'recent_pullback'
+RECENT_PULLBACK_LOOKBACK_DAYS = 6
+RECENT_PULLBACK_MIN_PRIOR_RISE = 13.0
+RECENT_PULLBACK_MIN_PULLBACK = 3.0
+RECENT_PULLBACK_MAX_PULLBACK = 40.0
+RECENT_PULLBACK_TOP_N = 100
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
@@ -212,17 +234,20 @@ def _resample_normalize(values, n_points=N_POINTS):
     return (y - y_min) / (y_max - y_min)
 
 
-def _breakout_surge(group, window_end, recent_months=BREAKOUT_RECENT_MONTHS):
+def _breakout_surge(
+    group, window_end, recent_months=BREAKOUT_RECENT_MONTHS,
+    min_marcap=BREAKOUT_MIN_MARCAP, min_amount=BREAKOUT_MIN_RECENT_AMOUNT,
+):
     """"횡보 후 급등"의 상승 폭(%). 최근 1개월 내 고점 + 최소 시총/거래대금 조건."""
     if len(group) < 10:
         return None
-    if group['Marcap'].iloc[-1] < BREAKOUT_MIN_MARCAP:
+    if group['Marcap'].iloc[-1] < min_marcap:
         return None
     recent_start = window_end - pd.DateOffset(months=recent_months)
     recent = group[group.index >= recent_start]
     if recent.empty:
         return None
-    if recent['Amount'].mean() < BREAKOUT_MIN_RECENT_AMOUNT:
+    if recent['Amount'].mean() < min_amount:
         return None
     peak_date = recent['Close'].idxmax()
     peak_val = recent.loc[peak_date, 'Close']
@@ -235,7 +260,7 @@ def _breakout_surge(group, window_end, recent_months=BREAKOUT_RECENT_MONTHS):
     return (peak_val / trough_val - 1) * 100
 
 
-def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
+def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6, min_marcap=None, min_amount=None):
     """기간 내 종가 흐름이 지정한 차트 패턴과 가장 비슷한 종목을 찾는다."""
     if pattern_key not in PATTERN_DEFINITIONS:
         raise ValueError(f'알 수 없는 패턴: {pattern_key}')
@@ -243,6 +268,10 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
     show_breakout = pattern_key == BREAKOUT_PATTERN_KEY
     if top_n is None:
         top_n = BREAKOUT_TOP_N if show_breakout else 20
+    if min_marcap is None:
+        min_marcap = BREAKOUT_MIN_MARCAP
+    if min_amount is None:
+        min_amount = BREAKOUT_MIN_RECENT_AMOUNT
 
     expected_days = price_df.index.normalize().nunique()
     window_end = price_df.index.max()
@@ -259,7 +288,7 @@ def find_matching_stocks(price_df, pattern_key, top_n=None, min_coverage=0.6):
         if np.isnan(score):
             continue
         if show_breakout:
-            breakout_return = _breakout_surge(group, window_end)
+            breakout_return = _breakout_surge(group, window_end, min_marcap=min_marcap, min_amount=min_amount)
             if breakout_return is None:
                 continue
         last_row = group.iloc[-1]
@@ -354,13 +383,16 @@ def find_today_momentum_stocks(price_df, top_n=50):
     return result.sort_values('BestScore', ascending=False).head(top_n).reset_index(drop=True)[columns]
 
 
-def _bottom_rebound_metrics(group, search_window_fraction=BOTTOM_REBOUND_SEARCH_WINDOW_FRACTION):
+def _bottom_rebound_metrics(
+    group, search_window_fraction=BOTTOM_REBOUND_SEARCH_WINDOW_FRACTION,
+    min_marcap=BOTTOM_REBOUND_MIN_MARCAP, min_amount=BOTTOM_REBOUND_MIN_RECENT_AMOUNT,
+):
     """"바닥 찍고 연속 반등"의 저점 대비 반등률(%). 조건 미달이면 None."""
     if len(group) < 20:
         return None
-    if group['Marcap'].iloc[-1] < BOTTOM_REBOUND_MIN_MARCAP:
+    if group['Marcap'].iloc[-1] < min_marcap:
         return None
-    if group['Amount'].tail(20).mean() < BOTTOM_REBOUND_MIN_RECENT_AMOUNT:
+    if group['Amount'].tail(20).mean() < min_amount:
         return None
     closes = group['Close'].values
     n = len(closes)
@@ -386,14 +418,18 @@ def _bottom_rebound_metrics(group, search_window_fraction=BOTTOM_REBOUND_SEARCH_
     return rise_pct
 
 
-def find_bottom_rebound_stocks(price_df, top_n=None):
+def find_bottom_rebound_stocks(price_df, top_n=None, min_marcap=None, min_amount=None):
     """장기 하락 후 저점을 찍고 반등 중인 종목을 찾는다."""
     if top_n is None:
         top_n = BOTTOM_REBOUND_TOP_N
+    if min_marcap is None:
+        min_marcap = BOTTOM_REBOUND_MIN_MARCAP
+    if min_amount is None:
+        min_amount = BOTTOM_REBOUND_MIN_RECENT_AMOUNT
     rows = []
     for code, group in price_df.groupby('Code', sort=False):
         group = group.sort_index()
-        rise_pct = _bottom_rebound_metrics(group)
+        rise_pct = _bottom_rebound_metrics(group, min_marcap=min_marcap, min_amount=min_amount)
         if rise_pct is None:
             continue
         last_row = group.iloc[-1]
@@ -406,6 +442,69 @@ def find_bottom_rebound_stocks(price_df, top_n=None):
     if result.empty:
         return result
     return result.sort_values('ReboundReturn', ascending=False).head(top_n).reset_index(drop=True)
+
+
+def _recent_pullback_metrics(
+    group, lookback_days=RECENT_PULLBACK_LOOKBACK_DAYS,
+    min_prior_rise=RECENT_PULLBACK_MIN_PRIOR_RISE, min_pullback=RECENT_PULLBACK_MIN_PULLBACK,
+    max_pullback=RECENT_PULLBACK_MAX_PULLBACK, min_marcap=SURGE_MIN_MARCAP, min_amount=SURGE_MIN_RECENT_AMOUNT,
+):
+    """최근 lookback_days(기본 6거래일) 안에서 "짧게 오르고 - 살짝 눌리고 - 아직
+    저점보다는 높은 채로 마감"인 종목의 (PriorRise%, Pullback%)을 계산한다.
+    조건 미달이면 None. 전체 기간 모양 비교로는 안 잡히는 짧은 며칠짜리 등락을
+    따로 본다(2026-09-04 실제 급등주 TPC로보틱스/E8 사례로 확인)."""
+    if len(group) < lookback_days + 5:
+        return None
+    if group['Marcap'].iloc[-1] < min_marcap:
+        return None
+    if group['Amount'].tail(20).mean() < min_amount:
+        return None
+    closes = group['Close'].values[-lookback_days:]
+    peak_idx = int(np.argmax(closes))
+    if peak_idx == len(closes) - 1:
+        return None
+    peak_val = closes[peak_idx]
+    pre_peak = closes[:peak_idx + 1]
+    trough = pre_peak.min()
+    if trough <= 0:
+        return None
+    prior_rise = (peak_val / trough - 1) * 100
+    if prior_rise < min_prior_rise:
+        return None
+    current = closes[-1]
+    if current <= trough:
+        return None
+    pullback = (peak_val - current) / peak_val * 100
+    if pullback < min_pullback or pullback > max_pullback:
+        return None
+    return prior_rise, pullback
+
+
+def find_recent_pullback_stocks(price_df, top_n=None, min_marcap=None, min_amount=None):
+    """최근 며칠간 짧게 오른 뒤 살짝 눌리고 있는(=재상승 대기 중일 수 있는) 종목을 찾는다."""
+    if top_n is None:
+        top_n = RECENT_PULLBACK_TOP_N
+    if min_marcap is None:
+        min_marcap = SURGE_MIN_MARCAP
+    if min_amount is None:
+        min_amount = SURGE_MIN_RECENT_AMOUNT
+    rows = []
+    for code, group in price_df.groupby('Code', sort=False):
+        group = group.sort_index()
+        metrics = _recent_pullback_metrics(group, min_marcap=min_marcap, min_amount=min_amount)
+        if metrics is None:
+            continue
+        prior_rise, pullback = metrics
+        last_row = group.iloc[-1]
+        rows.append({
+            'Code': code, 'Name': last_row['Name'], 'Close': last_row['Close'],
+            'Marcap': last_row['Marcap'], 'PriorRise': prior_rise, 'Pullback': pullback,
+        })
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'PriorRise', 'Pullback']
+    result = pd.DataFrame(rows, columns=columns)
+    if result.empty:
+        return result
+    return result.sort_values('Pullback', ascending=True).head(top_n).reset_index(drop=True)
 
 
 def _sustained_volume_metrics(group):
@@ -456,10 +555,21 @@ def find_sustained_volume_stocks(price_df, top_n=None):
     return result.sort_values('VolumeRatio', ascending=False).head(top_n).reset_index(drop=True)
 
 
-def _combine_with_source_tag(frames_with_labels):
-    """[(DataFrame, 라벨), ...]을 Code/Name/Close/Marcap + MatchedPattern으로
+def _dept_risk_label(dept):
+    """Dept 값에 KRX 공식 위험 지정 키워드가 있으면 그 키워드를, 없으면 None을 반환한다."""
+    if not isinstance(dept, str):
+        return None
+    for kw in RISK_DEPT_KEYWORDS:
+        if kw in dept:
+            return kw
+    return None
+
+
+def _combine_with_source_tag(frames_with_labels, price_df):
+    """[(DataFrame, 라벨), ...]을 Code/Name/Close/Marcap + MatchedPattern + Risk로
     합친다. 같은 종목이 여러 하위 패턴에 동시에 걸리면 먼저 나온 것 하나만 남긴다
-    (순서가 우선순위 — 더 강하게 검증된 패턴을 앞에 둔다)."""
+    (순서가 우선순위 — 더 강하게 검증된 패턴을 앞에 둔다). Risk는 price_df의 최근
+    Dept 값에서 관리종목/투자주의환기종목 등 위험 지정 여부를 뽑아온다."""
     frames = []
     for df_part, label in frames_with_labels:
         if df_part is None or df_part.empty:
@@ -467,25 +577,37 @@ def _combine_with_source_tag(frames_with_labels):
         part = df_part[['Code', 'Name', 'Close', 'Marcap']].copy()
         part['MatchedPattern'] = label
         frames.append(part)
-    columns = ['Code', 'Name', 'Close', 'Marcap', 'MatchedPattern']
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'MatchedPattern', 'Risk']
     if not frames:
         return pd.DataFrame(columns=columns)
     combined = pd.concat(frames, ignore_index=True)
-    return combined.drop_duplicates(subset='Code', keep='first').reset_index(drop=True)
+    combined = combined.drop_duplicates(subset='Code', keep='first').reset_index(drop=True)
+    last_dept = price_df.sort_index().groupby('Code')['Dept'].last()
+    combined['Risk'] = combined['Code'].map(last_dept).map(_dept_risk_label)
+    return combined[columns]
 
 
 def find_presurge_pattern_stocks(price_df, top_n=100):
-    """횡보 후 급등형 + 바닥 찍고 연속 반등형 + 급등 후 눌림목형을 합쳐서 보여준다
-    ("급등 전조 패턴형" — 아직 상한가가 확정되지 않은, 모양만으로 추정하는 후보들)."""
-    r_sideways = find_matching_stocks(price_df, BREAKOUT_PATTERN_KEY, top_n=top_n)
+    """횡보 후 급등형 + 바닥 찍고 연속 반등형 + 최근 눌림목 후 재상승형 + 급등 후
+    눌림목형을 합쳐서 보여준다("급등 전조 패턴형" — 아직 상한가가 확정되지 않은,
+    모양만으로 추정하는 후보들). ④/⑧은 시가총액/거래대금 하한을 SURGE_MIN_MARCAP/
+    SURGE_MIN_RECENT_AMOUNT로 낮춰서 호출한다."""
+    r_sideways = find_matching_stocks(
+        price_df, BREAKOUT_PATTERN_KEY, top_n=top_n,
+        min_marcap=SURGE_MIN_MARCAP, min_amount=SURGE_MIN_RECENT_AMOUNT,
+    )
     r_rally = find_matching_stocks(price_df, RALLY_PULLBACK_PATTERN_KEY, top_n=top_n)
-    r_bottom = find_bottom_rebound_stocks(price_df, top_n=top_n)
+    r_bottom = find_bottom_rebound_stocks(
+        price_df, top_n=top_n, min_marcap=SURGE_MIN_MARCAP, min_amount=SURGE_MIN_RECENT_AMOUNT,
+    )
+    r_recent = find_recent_pullback_stocks(price_df, top_n=top_n)
     labels = PATTERN_DEFINITIONS
     return _combine_with_source_tag([
         (r_sideways, labels[BREAKOUT_PATTERN_KEY]['label']),
         (r_bottom, labels[BOTTOM_REBOUND_PATTERN_KEY]['label']),
+        (r_recent, labels[RECENT_PULLBACK_PATTERN_KEY]['label']),
         (r_rally, labels[RALLY_PULLBACK_PATTERN_KEY]['label']),
-    ])
+    ], price_df)
 
 
 def find_limitup_continuation_stocks(price_df, top_n=50):
@@ -497,7 +619,7 @@ def find_limitup_continuation_stocks(price_df, top_n=50):
     return _combine_with_source_tag([
         (r_vol, labels[SUSTAINED_VOLUME_PATTERN_KEY]['label']),
         (r_today, labels[TODAY_MOMENTUM_PATTERN_KEY]['label']),
-    ])
+    ], price_df)
 
 
 # ---------------------------------------------------------------------------
@@ -554,9 +676,11 @@ st.markdown(
     '찾기" 관련 세부 조건들을 성격별로 묶은 메뉴입니다 — ⑤는 아직 상한가가 확정되지 않은 종목 중 '
     '모양만으로 후보를 추정하고, ⑥은 이미 상한가를 기록한 종목 중 다음 상한가로 이어질 가능성이 '
     '상대적으로 높은 후보를 찾습니다(어떤 세부 조건에 걸렸는지는 결과 표의 "매칭된 세부 유형" '
-    '칼럼에서 확인 가능). 대상은 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 '
-    '2,000 종목 이내)입니다. 업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 '
-    '비어있을 수 있습니다.'
+    '칼럼에서 확인 가능). ①~④는 국내 보통주(우선주·스팩·리츠·코넥스 제외, 기준일 시가총액 상위 '
+    '2,000 종목 이내)만 봅니다. ⑤⑥은 실제 급등주가 초소형주에서도 자주 나오는 게 확인돼('
+    '2026-09-04 사례 검증) 시가총액 상위 3,000위까지 훨씬 넓게 보고, 관리종목·투자주의환기종목 '
+    '같은 KRX 공식 위험 지정 종목도 제외하지 않는 대신 "위험 표시(KRX)" 칼럼에 ⚠️로 표시합니다. '
+    '업종/PER은 KRX(pykrx)에서 별도로 조회하며, 조회에 실패하면 해당 칸이 비어있을 수 있습니다.'
 )
 
 col1, col2, col3 = st.columns(3)
@@ -581,7 +705,8 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
             st.session_state['pattern_result'] = None
         else:
             df = filter_single_stocks(df)
-            df = filter_top_marcap(df)
+            is_surge_menu = pattern_key in (PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
+            df = filter_top_marcap(df, top_n=SURGE_TOP_MARCAP_N) if is_surge_menu else filter_top_marcap(df)
             if is_halt:
                 matched = find_halted_stocks(df)
             elif pattern_key == PRESURGE_PATTERN_KEY:
@@ -629,29 +754,37 @@ else:
             '정지 중이었을 수 있습니다(조회 범위 밖이라 정확한 시작일을 알 수 없음).'
         )
     elif result_key == PRESURGE_PATTERN_KEY:
-        show_cols.append('MatchedPattern')
+        show_cols += ['MatchedPattern', 'Risk']
         st.caption(
-            '⑤ 급등 전조 패턴형은 세 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·급등 후 '
-            '눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 유형" 칼럼에서 어떤 조건에 걸렸는지 확인할 '
-            '수 있고, 한 종목이 여러 조건에 동시에 해당하면 그중 하나만 표시됩니다. 아직 상한가가 '
-            '확정되지 않은 종목 중 모양만으로 후보를 추정하는 용도입니다.'
+            '⑤ 급등 전조 패턴형은 네 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·최근 '
+            '눌림목 후 재상승형·급등 후 눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 유형" 칼럼에서 '
+            '어떤 조건에 걸렸는지 확인할 수 있고, 한 종목이 여러 조건에 동시에 해당하면 그중 하나만 '
+            '표시됩니다. "최근 눌림목 후 재상승형"은 조회 기간 전체가 아니라 최근 6거래일만 보고 '
+            '"짧게 오르고-살짝 눌리고-아직 저점보다는 높게 마감"인 종목을 찾습니다. 이 메뉴는 시총 '
+            '상위 3000위·50억원 이상까지 넓게 보고(다른 메뉴보다 훨씬 완화됨), 관리종목·투자주의환기 '
+            '종목 같은 KRX 위험 지정 종목도 "위험 표시(KRX)" 칼럼에 ⚠️로 표시한 채 포함합니다.'
         )
         st.warning(
-            '⚠️ 세 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
+            '⚠️ 네 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
             '**횡보 후 급등형**은 다음날 상한가 확률이 0.6%로 사실상 예측 불가능했고, 한 달 내로 '
             '넓히면 약 10%(무작위 5.2%)였습니다. **바닥 찍고 연속 반등형**은 다음날~한 달 내 상한가 '
             '확률이 23.1%로 무작위(2.7%) 대비 높았지만, 정작 매수 후 1개월 보유 수익률은 -17.0%로 '
-            '무작위(-8.2%)보다 나빴습니다. **급등 후 눌림목형**은 1개월 보유 수익률이 -13.2%로 '
-            '무작위(-15.7%)보다 근소하게 나은 수준에 그쳤습니다. 셋 다 상한가를 보장하지 않으며 '
-            '특히 "매수 후 장기 보유"에는 적합하지 않으니 참고용으로만 활용하세요.'
+            '무작위(-8.2%)보다 나빴습니다. **최근 눌림목 후 재상승형**은 다음날 재상한가 확률이 '
+            '1.14%(무작위 0.47%, 약 2.4배), 5거래일 내로 넓히면 4.6%(무작위 1.7%, 약 2.8배)로 약한 '
+            '수준이지만 꾸준한 신호가 확인됐습니다(2026년 4~9월, 105개 검증일 기준). **급등 후 '
+            '눌림목형**은 1개월 보유 수익률이 -13.2%로 무작위(-15.7%)보다 근소하게 나은 수준에 '
+            '그쳤습니다. 넷 다 상한가를 보장하지 않으며 특히 "매수 후 장기 보유"에는 적합하지 '
+            '않으니 참고용으로만 활용하세요.'
         )
     elif result_key == LIMITUP_CONTINUATION_KEY:
-        show_cols.append('MatchedPattern')
+        show_cols += ['MatchedPattern', 'Risk']
         st.caption(
             '⑥ 상한가 지속형은 두 가지 하위 조건(오늘 상한가+모양 필터·상한가 후 거래량 지속형)을 '
             '합쳐서 보여줍니다. 둘 다 "이미 상한가를 기록한 종목 중 다음 상한가로 이어질 가능성이 '
             '상대적으로 높은 것"을 찾는 용도라, 최근 상한가 종목이 없으면 결과가 비어있을 수 '
-            '있습니다. ②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다.'
+            '있습니다. ②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다. 이 메뉴도 ⑤와 '
+            '동일하게 시총 상위 3000위까지 넓게 보며, KRX 위험 지정 종목도 "위험 표시(KRX)" 칼럼에 '
+            '⚠️로 표시한 채 포함합니다.'
         )
         st.warning(
             '⚠️ "확률이 더 높다"는 뜻이지 보장이 아닙니다. **오늘 상한가+모양 필터**는 실제 상한가 '
@@ -665,7 +798,7 @@ else:
     col_labels = {
         'Name': '종목명', 'Close': '현재가', 'Sector': '분야(업종)', 'Marcap': '시가총액(백만원)',
         'PER': 'PER', 'HaltStartDate': '거래정지 시작일', 'HaltDays': '정지 영업일수',
-        'MatchedPattern': '매칭된 세부 유형',
+        'MatchedPattern': '매칭된 세부 유형', 'Risk': '위험 표시(KRX)',
     }
     display_matched = matched[show_cols].copy()
     display_matched['Close'] = display_matched['Close'].apply(lambda v: f'{v:,.0f}' if pd.notna(v) else v)
@@ -674,6 +807,8 @@ else:
     )
     if 'HaltStartDate' in display_matched.columns:
         display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
+    if 'Risk' in display_matched.columns:
+        display_matched['Risk'] = display_matched['Risk'].apply(lambda v: f'⚠️ {v}' if pd.notna(v) else '')
     display_matched = display_matched.rename(columns=col_labels)
 
     display_matched['실시간 차트'] = 'https://finance.naver.com/item/main.naver?code=' + matched['Code']

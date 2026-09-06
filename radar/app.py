@@ -25,7 +25,7 @@ from src.llm_report import generate_personalized_alert  # noqa: E402
 from src.i18n import t, col_label, reason_label, pattern_label  # noqa: E402
 from src.chart_pattern import (  # noqa: E402
     MENU_PATTERN_KEYS, HALT_PATTERN_KEY, TODAY_MOMENTUM_PATTERN_KEY,
-    PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY,
+    PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY, SURGE_TOP_MARCAP_N,
     resolve_date_range, filter_single_stocks, filter_top_marcap, find_matching_stocks,
     find_halted_stocks, find_presurge_pattern_stocks, find_limitup_continuation_stocks,
 )
@@ -262,7 +262,12 @@ with tab5:
                 st.session_state['pattern_result'] = None
             else:
                 df = filter_single_stocks(df)
-                df = filter_top_marcap(df)
+                # ⑤⑥(급등주 찾기 메뉴)은 사용자 선택에 따라 시가총액 상위
+                # SURGE_TOP_MARCAP_N까지(사실상 전종목) 넓혀서 본다 — 기본
+                # TOP_MARCAP_N(2000위)으로는 실제 급등주(2026-09-04 E8 2767위,
+                # KS인더스트리 2781위)가 애초에 검색 대상에서 빠지는 게 확인됐다.
+                is_surge_menu = pattern_key in (PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
+                df = filter_top_marcap(df, top_n=SURGE_TOP_MARCAP_N) if is_surge_menu else filter_top_marcap(df)
                 if is_halt:
                     matched = find_halted_stocks(df)
                 elif pattern_key == PRESURGE_PATTERN_KEY:
@@ -307,11 +312,11 @@ with tab5:
             show_cols += ['HaltStartDate', 'HaltDays']
             st.caption(t('tab5_halt_note', lang))
         elif result_key == PRESURGE_PATTERN_KEY:
-            show_cols.append('MatchedPattern')
+            show_cols += ['MatchedPattern', 'Risk']
             st.caption(t('tab5_presurge_note', lang))
             st.warning(t('tab5_presurge_disclaimer', lang))
         elif result_key == LIMITUP_CONTINUATION_KEY:
-            show_cols.append('MatchedPattern')
+            show_cols += ['MatchedPattern', 'Risk']
             st.caption(t('tab5_limitup_continuation_note', lang))
             st.warning(t('tab5_limitup_continuation_disclaimer', lang))
         col_map = {c: col_label(c, lang) for c in show_cols}
@@ -325,6 +330,8 @@ with tab5:
         )
         if 'HaltStartDate' in display_matched.columns:
             display_matched['HaltStartDate'] = display_matched['HaltStartDate'].dt.strftime('%Y-%m-%d')
+        if 'Risk' in display_matched.columns:
+            display_matched['Risk'] = display_matched['Risk'].apply(lambda v: f'⚠️ {v}' if pd.notna(v) else '')
         display_matched = display_matched.rename(columns=col_map)
 
         chart_col = t('tab5_chart_col', lang)

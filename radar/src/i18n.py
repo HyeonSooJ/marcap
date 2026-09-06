@@ -228,38 +228,60 @@ TRANSLATIONS = {
     },
     'tab5_presurge_note': {
         'ko': (
-            '⑤ 급등 전조 패턴형은 세 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·급등 후 '
-            '눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 유형" 칼럼에서 어떤 조건에 걸렸는지 확인할 '
-            '수 있고, 한 종목이 여러 조건에 동시에 해당하면 그중 하나만 표시됩니다. 아직 상한가가 '
-            '확정되지 않은 종목 중 모양만으로 후보를 추정하는 용도입니다.'
+            '⑤ 급등 전조 패턴형은 네 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·최근 '
+            '눌림목 후 재상승형·급등 후 눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 유형" 칼럼에서 '
+            '어떤 조건에 걸렸는지 확인할 수 있고, 한 종목이 여러 조건에 동시에 해당하면 그중 하나만 '
+            '표시됩니다. 아직 상한가가 확정되지 않은 종목 중 모양만으로 후보를 추정하는 용도입니다. '
+            '"최근 눌림목 후 재상승형"은 조회 기간 전체가 아니라 최근 6거래일만 보고 "짧게 오르고-'
+            '살짝 눌리고-아직 저점보다는 높게 마감"인 종목을 찾습니다(2026-09-04 실제 급등주 '
+            'TPC로보틱스·E8 사례로 확인 — 이 둘은 전체 기간 모양 비교로는 안 잡혔음).  \n'
+            '이 메뉴는 실제 급등주가 시총 300억원 미만 초소형주에서도 자주 나오는 게 확인돼('
+            '2026-09-04 사례 검증), 다른 메뉴(①~④, 시총 300억원·상위 2000위 기준)보다 훨씬 넓게 '
+            '시총 50억원 이상·상위 3000위까지 봅니다. 그만큼 관리종목·투자주의환기종목처럼 KRX가 '
+            '공식적으로 위험 표시한 종목도 섞여 나올 수 있는데, 제외하지 않는 대신 "위험 표시(KRX)" '
+            '칼럼에 ⚠️로 표시합니다.'
         ),
         'en': (
-            '⑤ Pre-surge Pattern combines three sub-conditions (Sideways-then-Breakout, '
-            'Bottom-then-Rebound, Rally-then-Pullback). The "Matched Sub-type" column shows which '
-            'condition matched; if a stock matches more than one, only one is shown. This is for '
-            'stocks that have not yet hit the daily limit — candidates estimated from chart shape '
-            'alone.'
+            '⑤ Pre-surge Pattern combines four sub-conditions (Sideways-then-Breakout, '
+            'Bottom-then-Rebound, Recent Pullback then Continuation, Rally-then-Pullback). The '
+            '"Matched Sub-type" column shows which condition matched; if a stock matches more than '
+            'one, only one is shown. This is for stocks that have not yet hit the daily limit — '
+            'candidates estimated from chart shape alone. "Recent Pullback then Continuation" looks '
+            'only at the last 6 trading days (not the full period) for "rose briefly, pulled back a '
+            'bit, still closing above the pullback low" (confirmed against real 2026-09-04 surging '
+            'stocks TPC Robotics and E8, which the full-period shape comparisons missed).  \n'
+            'This menu was widened to market cap ≥5bn KRW / top 3,000 by rank (much broader than the '
+            'other menus\' 30bn KRW / top 2,000), after a real 2026-09-04 case showed genuine surging '
+            'stocks often come from sub-30bn-KRW micro caps. That means stocks officially flagged by '
+            'KRX (administrative issue, investment alert, etc.) can appear too — not excluded, but '
+            'marked with ⚠️ in the "Risk Flag (KRX)" column.'
         ),
     },
     'tab5_presurge_disclaimer': {
         'ko': (
-            '⚠️ 세 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
+            '⚠️ 네 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
             '**횡보 후 급등형**은 다음날 상한가 확률이 0.6%로 사실상 예측 불가능했고, 한 달 내로 '
             '넓히면 약 10%(무작위 5.2%)였습니다. **바닥 찍고 연속 반등형**은 다음날~한 달 내 상한가 '
             '확률이 23.1%로 무작위(2.7%) 대비 높았지만, 정작 매수 후 1개월 보유 수익률은 -17.0%로 '
-            '무작위(-8.2%)보다 나빴습니다. **급등 후 눌림목형**은 1개월 보유 수익률이 -13.2%로 '
-            '무작위(-15.7%)보다 근소하게 나은 수준에 그쳤습니다. 셋 다 상한가를 보장하지 않으며 '
-            '특히 "매수 후 장기 보유"에는 적합하지 않으니 참고용으로만 활용하세요.'
+            '무작위(-8.2%)보다 나빴습니다. **최근 눌림목 후 재상승형**은 다음날 재상한가 확률이 '
+            '1.14%(무작위 0.47%, 약 2.4배), 5거래일 내로 넓히면 4.6%(무작위 1.7%, 약 2.8배)로 약한 '
+            '수준이지만 꾸준한 신호가 확인됐습니다(2026년 4~9월, 105개 검증일 기준). **급등 후 '
+            '눌림목형**은 1개월 보유 수익률이 -13.2%로 무작위(-15.7%)보다 근소하게 나은 수준에 '
+            '그쳤습니다. 넷 다 상한가를 보장하지 않으며 특히 "매수 후 장기 보유"에는 적합하지 '
+            '않으니 참고용으로만 활용하세요.'
         ),
         'en': (
-            '⚠️ All three conditions were walk-forward backtested on 2026 data, with mixed results. '
+            '⚠️ All four conditions were walk-forward backtested on 2026 data, with mixed results. '
             '**Sideways-then-Breakout**: next-day limit-up probability was 0.6% (essentially '
             'unpredictable), rising to ~10% within a month (vs. 5.2% random). '
             '**Bottom-then-Rebound**: next-day-to-1-month limit-up probability was 23.1% (vs. 2.7% '
             'random), but the average 1-month return after buying was -17.0%, worse than random '
-            '(-8.2%). **Rally-then-Pullback**: average 1-month return was -13.2%, only marginally '
-            'better than random (-15.7%). None of the three guarantees a limit-up, and none is '
-            'suited for buy-and-hold — reference only.'
+            '(-8.2%). **Recent Pullback then Continuation**: next-day re-hit probability was 1.14% '
+            '(vs. 0.47% random, ~2.4x), rising to 4.6% within 5 trading days (vs. 1.7% random, '
+            '~2.8x) — a weak but consistent signal (validated on 105 test dates, Apr-Sep 2026). '
+            '**Rally-then-Pullback**: average 1-month return was -13.2%, only marginally better than '
+            'random (-15.7%). None of the four guarantees a limit-up, and none is suited for '
+            'buy-and-hold — reference only.'
         ),
     },
     'tab5_limitup_continuation_note': {
@@ -268,14 +290,21 @@ TRANSLATIONS = {
             '합쳐서 보여줍니다. 둘 다 "이미 상한가를 기록한 종목 중 다음 상한가로 이어질 가능성이 '
             '상대적으로 높은 것"을 찾는 용도라, 최근 상한가 종목이 없으면 결과가 비어있을 수 '
             '있습니다. ②개월수 선택과 무관하게 항상 최근 2개월 흐름으로 계산합니다(검증된 조건과 '
-            '동일하게 맞추기 위함).'
+            '동일하게 맞추기 위함).  \n'
+            '이 메뉴도 ⑤와 동일하게 시총 상위 3000위까지 넓게 봅니다(원래도 시가총액 하한은 없던 '
+            '조건들입니다). 관리종목·투자주의환기종목 등 KRX 위험 표시 종목도 제외하지 않고 '
+            '"위험 표시(KRX)" 칼럼에 ⚠️로 표시합니다.'
         ),
         'en': (
             '⑥ Limit-Up Continuation combines two sub-conditions (Today Limit-Up + Shape Filter, '
             'Sustained Volume After Limit-Up). Both look for stocks that already hit the daily limit '
             'and are relatively more likely to hit it again — an empty result is expected if no '
             'stock hit the limit recently. This always uses a fixed 2-month lookback regardless of '
-            'the ② months selector, to match the validated backtest conditions exactly.'
+            'the ② months selector, to match the validated backtest conditions exactly.  \n'
+            'Like ⑤, this menu also looks up to the top 3,000 by market-cap rank (these '
+            'sub-conditions never had a market-cap floor to begin with). Stocks officially flagged by '
+            'KRX (administrative issue, investment alert, etc.) are not excluded either — marked with '
+            '⚠️ in the "Risk Flag (KRX)" column.'
         ),
     },
     'tab5_limitup_continuation_disclaimer': {
@@ -340,6 +369,7 @@ COLUMN_LABELS = {
     'HaltStartDate': {'ko': '거래정지 시작일', 'en': 'Halt Start Date'},
     'HaltDays': {'ko': '정지 영업일수', 'en': 'Halt Trading Days'},
     'MatchedPattern': {'ko': '매칭된 세부 유형', 'en': 'Matched Sub-type'},
+    'Risk': {'ko': '위험 표시(KRX)', 'en': 'Risk Flag (KRX)'},
     'ReboundReturn': {'ko': '저점 대비 반등률(%)', 'en': 'Rebound from Low (%)'},
     'VolumeRatio': {'ko': '거래량 유지비율', 'en': 'Volume Retention Ratio'},
 }
