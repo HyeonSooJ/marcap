@@ -360,14 +360,16 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 
 ### 비상장 기업 (Pre-IPO 프록시, 한국인 거래 가능 추정)
 
-- SpaceX(미국, `SPCXUSDT`/`SPCXUSD1`) — 상장 전 기업가치에 노출되는 계약.
-  2026년 7월 출시, USD1 스테이블코인으로 결제하는 버전도 있음. 레버리지
-  미확인.
-- OpenAI(미국, `OPENAIUSDT`) — 2026-05-26 출시, Pre-IPO Perpetual Contracts 계열
-  두 번째 상품. 레버리지 미확인.
+- SpaceX(미국) — `SPCXUSDT`(USDT 결제)는 **2026-05-21** 최초 상장(세계
+  최초 SpaceX Pre-IPO 무기한 선물), 최대 25배 레버리지. 이후 USD1
+  스테이블코인으로 결제하는 `SPCXUSD1` 버전이 **2026-07-20 09:00 UTC**에
+  추가 상장.
+- OpenAI(미국, `OPENAIUSDT`) — **2026-05-26** 출시, Pre-IPO Perpetual
+  Contracts 계열 두 번째 상품. 레버리지 미확인.
+- Anthropic(미국, `ANTHROPICUSDT`) — **2026-06-02 04:30 UTC** 출시,
+  최대 20배 레버리지. 앤트로픽이 SEC에 비공개 S-1을 제출한 지 몇 시간
+  만에 상장된 것으로 보도됨.
 - 즈푸AI(중국, ZHIPUUSDT) — 위 중국 표 참고.
-- Anthropic(미국, `ANTHROPICUSDT`) — 화면에 "Pre-M"(Pre-Market) 표시로
-  확인됨. 레버리지 미확인.
 
 ## 요약: 국가별 한 줄 정리
 
