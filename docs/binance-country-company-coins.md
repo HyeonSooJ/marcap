@@ -221,6 +221,7 @@ NYSE 상장)가 이에 해당합니다.
 | CRDOUSDT | 크레도테크놀로지(Credo Technology, 반도체) | 미확인 |
 | CRCLUSDT | 서클(Circle, USDC 발행사) | 미확인 |
 | COSTUSDT | 코스트코(Costco) | 미확인 |
+| AAOIUSDT | 어플라이드옵토일렉트로닉스(Applied Optoelectronics, 광학부품) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
