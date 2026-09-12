@@ -84,6 +84,15 @@ NYSE 상장)가 이에 해당합니다.
 | MRVLUSDT / CRWVUSDT / WMTUSDT / JPMUSDT / VUSDT / BRKBUSDT | 마벨/코어위브/월마트/JP모건/비자/버크셔해서웨이 | 2026-05-15~18 | 미확인 |
 | DJTUSDT / MRNAUSDT | 트럼프미디어(Trump Media)/모더나(Moderna) | 2026-08-25 | 미확인 (같은 날 반도체 ETF 3종도 추가) |
 | SNDKUSDT | 샌디스크(SanDisk) | 미확인 | 미확인 (나스닥 대비 거래량 비중 20%+로 활발) |
+| WENUSDT | 웬디스(Wendy's) | 미확인 | 미확인 |
+| WDCUSDT | 웨스턴디지털(Western Digital) | 미확인 | 미확인(타 거래소 기준 10배 사례 있음) |
+
+**미국 섹터 ETF** — 개별 종목이 아니라 산업 섹터 전체를 추종:
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| XLEUSDT | Energy Select Sector SPDR Fund(에너지 섹터 ETF) | 미확인 |
+| XBIUSDT | SPDR S&P Biotech ETF(바이오테크 섹터 ETF) | 최대 20배 |
 
 이 외에도 180개 계약 중 대다수가 미국 개별주·ETF라 전부 나열하기는
 어렵습니다. 한국인 계정에 대한 별도 차단 보도는 없습니다.
@@ -126,9 +135,15 @@ NYSE 상장)가 이에 해당합니다.
 |---|---|---|---|
 | XAUUSDT | 금(Gold) | 2026-01-05 | 최대 50배 |
 | XAGUSDT | 은(Silver) | 2026-01-07 | 최대 50배 |
+| XPTUSDT | 백금(Platinum) | 2026-01-30 | 최대 100배 |
+| XPDUSDT | 팔라듐(Palladium) | 2026-01-30 | 최대 100배 |
 
-이 둘이 TradFi 무기한 선물 카테고리의 최초 상품이며, 국가·기업 테마는
+이 넷이 TradFi 무기한 선물 카테고리의 최초 상품군이며, 국가·기업 테마는
 아니지만 같은 상품군이라 참고로 기재.
+
+**주의**: `XAUTUSDT`(밑에 "Tether Gold"로 표시)는 별개의 **크립토 토큰**
+입니다. 테더가 발행한 금 1온스 담보 스테이블코인형 토큰이지, 바이낸스의
+TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 
 ### 비상장 기업 (Pre-IPO 프록시, 한국인 거래 가능 추정)
 
