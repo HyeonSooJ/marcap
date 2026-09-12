@@ -154,6 +154,14 @@ NYSE 상장)가 이에 해당합니다.
 | VSTUSDT | 비스트라(Vistra Corp., 발전·에너지) | 미확인 |
 | VRTUSDT | 버티브(Vertiv Holdings, 데이터센터 인프라) | 미확인 |
 | USARUSDT | USA Rare Earth(희토류 채굴) | 미확인(회사명 표시 기준, 재확인 권장) |
+| PANWUSDT | 팔로알토 네트웍스(Palo Alto Networks, 보안) | 미확인 |
+| ORCLUSDT | 오라클(Oracle) | 미확인 |
+| PENGUSDT | 펭귄솔루션즈(Penguin Solutions) | 미확인 |
+| PLTRUSDT | 팔란티어(Palantir Technologies) | 미확인 |
+
+**주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
+토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
+같은 종류의 상품이니 혼동하지 마세요.
 
 ### 🇨🇦 캐나다 (한국인 거래 가능)
 
@@ -177,14 +185,16 @@ NYSE 상장)가 이에 해당합니다.
 | ZHONGJIUSDT | 중제쉬촹(ZhongJi Innolight, 中際旭創, 광모듈 제조사) | 미확인 | 20배 |
 | ZHIPUUSDT | 즈푸AI(Zhipu AI) 기업가치 | 2026-07-17 | Pre-IPO 계열 상품 특성상 10배 추정, 정확한 수치 미확인 |
 | UNITREEUSDT | 유니트리(Unitree Technology, 로봇 제조사) 기업가치 | 미확인 | Pre-IPO 계열 추정, 미확인 |
+| PDDUSDT | PDD Holdings(핀둬둬·테무 모기업, 나스닥 상장) | 미확인 | 미확인 |
 
 ### 🇯🇵 일본 (한국인 거래 가능)
 
 | 티커 | 기초자산 | 상장일 | 최대 레버리지 |
 |---|---|---|---|
 | SONYUSDT | 소니 | 2026-06-22 | 20배 |
+| PAYPUSDT | 페이페이(PayPay, 소프트뱅크·야후재팬 계열 핀테크) | 미확인 | 미확인 |
 
-일본 관련 종목이 더 있을 가능성이 있으나 이번 조사에서는 SONY만 확인.
+일본 관련 종목이 더 있을 가능성이 있으나 이번 조사에서는 위 2개만 확인.
 
 ### 🇹🇼 대만 (한국인 거래 가능)
 
