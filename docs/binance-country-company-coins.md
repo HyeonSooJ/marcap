@@ -121,6 +121,7 @@ NYSE 상장)가 이에 해당합니다.
 | SQQQUSDT | ProShares UltraPro Short QQQ(나스닥100 **-3배** 인버스) | 미확인 |
 | TQQQUSDT | ProShares UltraPro QQQ(나스닥100 **+3배** 레버리지) | 미확인 |
 | TZAUSDT | Direxion Small Cap Bear 3X(미국 스몰캡 지수 **-3배** 인버스) | 미확인 |
+| IWMUSDT | iShares Russell 2000 ETF(러셀2000 스몰캡 지수, 레버리지 없는 기본형) | 미확인 |
 | RAMUSDT | Roundhill T-REX 2X Long 계열(개별 종목 2배 레버리지, 정확한 기초자산 미확인) | 미확인 |
 
 **주의**: `SPXUSDT`는 S&P500과 무관한 밈코인 "SPX6900"입니다. 티커가
@@ -201,6 +202,7 @@ NYSE 상장)가 이에 해당합니다.
 | IBMUSDT | IBM | 미확인 |
 | INTCUSDT | 인텔(Intel) | 미확인 |
 | IONQUSDT | 아이온큐(IonQ, 양자컴퓨팅) | 미확인 |
+| IRENUSDT | IREN Limited(비트코인 채굴·데이터센터, 나스닥 상장) | 미확인(호주 출신 기업, 국가 분류 재확인 필요) |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
