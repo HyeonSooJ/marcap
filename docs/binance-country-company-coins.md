@@ -99,6 +99,16 @@ NYSE 상장)가 이에 해당합니다.
 | SMCIUSDT | 슈퍼마이크로컴퓨터(Super Micro Computer) | 미확인 | 미확인 |
 | SOFIUSDT | 소파이(SoFi Technologies, 핀테크) | 미확인 | 미확인 |
 | SNOWUSDT | 스노우플레이크(Snowflake) | 미확인 | 미확인 |
+| STXXUSDT | 시게이트(Seagate Technology) | 미확인 | 미확인 |
+| STRCUSDT | 스트래티지(Strategy Inc, 옛 마이크로스트래티지) Series A 우선주 | 미확인 | 미확인 |
+| TERUSDT | 테라다인(Teradyne, 반도체 검사장비) | 미확인 | 미확인 |
+| TEMUSDT | 템퍼스AI(Tempus AI) | 미확인 | 미확인 |
+
+**미국 채권 ETF** — 주식이 아니라 국채 가격을 추종하는 상품도 있습니다:
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| TBTUSDT | ProShares UltraShort 20+ Year Treasury(20년 이상 미국 국채 **-2배** 인버스) | 미확인 |
 
 **미국 지수 추종 ETF** — 개별 종목·섹터가 아니라 시장 전체 지수를 추종
 (사용자가 처음 예시로 든 "코루/EWY"와 가장 유사한 성격의 상품):
@@ -204,6 +214,7 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 | 한국(미국 상장 ETF·ADR 경유) | EWYUSDT, KORUUSDT, SKHYUSDT, SKUUSDT, SKDDUSDT | ✓ 가능 |
 | 미국 | TSLAUSDT, AAPLUSDT, NVDAUSDT, SMCIUSDT 등 다수 | ✓ 가능 |
 | 미국(지수 전체) | SPYUSDT(S&P500), SQQQUSDT(나스닥100 인버스) | ✓ 가능 |
+| 미국(국채) | TBTUSDT(20년+ 국채 인버스) | ✓ 가능 |
 | 캐나다 | SHOPUSDT(쇼피파이) | ✓ 가능 |
 | 중국 | BABAUSDT, TENCENTUSDT, XIAOMIUSDT 등 | ✓ 가능 |
 | 일본 | SONYUSDT | ✓ 가능 |
