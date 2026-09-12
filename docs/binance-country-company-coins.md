@@ -136,6 +136,13 @@ NYSE 상장)가 이에 해당합니다.
 | SOXLUSDT | Direxion Daily Semiconductor Bull 3X(반도체 **3배 롱**) | 미확인 |
 | SOXSUSDT | Direxion Daily Semiconductor Bear 3X(반도체 **3배 숏/인버스**) | 미확인 |
 | SNXXUSDT | Tradr 2X Long SNDK ETF(샌디스크 2배 롱) | 미확인 |
+| URNMUSDT | Sprott Uranium Miners ETF(우라늄 채굴 섹터 ETF) | 미확인 |
+
+**미국 변동성(VIX) ETF**:
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| UVXYUSDT | ProShares Ultra VIX Short-Term Futures ETF(VIX 변동성지수 레버리지) | 미확인 |
 
 **미국 개별주 추가**:
 
@@ -144,6 +151,9 @@ NYSE 상장)가 이에 해당합니다.
 | UBERUSDT | 우버(Uber Technologies) | 미확인 |
 | TTWOUSDT | 테이크투 인터랙티브(Take-Two Interactive, GTA 제작사) | 미확인 |
 | TXNUSDT | 텍사스 인스트루먼트(Texas Instruments, 반도체) | 미확인 |
+| VSTUSDT | 비스트라(Vistra Corp., 발전·에너지) | 미확인 |
+| VRTUSDT | 버티브(Vertiv Holdings, 데이터센터 인프라) | 미확인 |
+| USARUSDT | USA Rare Earth(희토류 채굴) | 미확인(회사명 표시 기준, 재확인 권장) |
 
 ### 🇨🇦 캐나다 (한국인 거래 가능)
 
@@ -166,6 +176,7 @@ NYSE 상장)가 이에 해당합니다.
 | POPMARTUSDT | 팝마트 | 미확인 | 미확인 |
 | ZHONGJIUSDT | 중제쉬촹(ZhongJi Innolight, 中際旭創, 광모듈 제조사) | 미확인 | 20배 |
 | ZHIPUUSDT | 즈푸AI(Zhipu AI) 기업가치 | 2026-07-17 | Pre-IPO 계열 상품 특성상 10배 추정, 정확한 수치 미확인 |
+| UNITREEUSDT | 유니트리(Unitree Technology, 로봇 제조사) 기업가치 | 미확인 | Pre-IPO 계열 추정, 미확인 |
 
 ### 🇯🇵 일본 (한국인 거래 가능)
 
