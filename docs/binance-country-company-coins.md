@@ -117,9 +117,11 @@ NYSE 상장)가 이에 해당합니다.
 | 티커 | 기초자산 | 최대 레버리지 |
 |---|---|---|
 | SPYUSDT | State Street SPDR S&P 500 ETF(S&P500 지수) | 미확인 |
+| QQQUSDT | Invesco QQQ Trust(나스닥100 지수, 레버리지 없는 기본형) | 미확인 |
 | SQQQUSDT | ProShares UltraPro Short QQQ(나스닥100 **-3배** 인버스) | 미확인 |
 | TQQQUSDT | ProShares UltraPro QQQ(나스닥100 **+3배** 레버리지) | 미확인 |
 | TZAUSDT | Direxion Small Cap Bear 3X(미국 스몰캡 지수 **-3배** 인버스) | 미확인 |
+| RAMUSDT | Roundhill T-REX 2X Long 계열(개별 종목 2배 레버리지, 정확한 기초자산 미확인) | 미확인 |
 
 **주의**: `SPXUSDT`는 S&P500과 무관한 밈코인 "SPX6900"입니다. 티커가
 비슷해 헷갈리기 쉬우니 진짜 S&P500 상품은 `SPYUSDT`인 점에 유의하세요.
@@ -158,6 +160,9 @@ NYSE 상장)가 이에 해당합니다.
 | ORCLUSDT | 오라클(Oracle) | 미확인 |
 | PENGUSDT | 펭귄솔루션즈(Penguin Solutions) | 미확인 |
 | PLTRUSDT | 팔란티어(Palantir Technologies) | 미확인 |
+| PYPLUSDT | 페이팔(PayPal) | 미확인 |
+| QCOMUSDT | 퀄컴(Qualcomm) | 미확인 |
+| RDDTUSDT | 레딧(Reddit) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
