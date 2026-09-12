@@ -59,9 +59,9 @@ NYSE 상장)가 이에 해당합니다.
 | HYUNDAIUSDT | 현대자동차 | 2026-06-02 | 20배(50배 확대 여부 미확인) | ✗ 불가 |
 | NAVERUSDT | 네이버 | 2026-08-14 | 최대 20배 | ✗ 불가 |
 | SAMSUNGEMUSDT | 삼성전기(Samsung Electro-Mechanics) | 미확인 | 미확인 | ✗ 불가 |
-| (LG전자 계약) | LG전자 | 2026-08-14 | 미확인(20배 추정) | ✗ 불가 |
+| LGELECTRONICSUSDT | LG전자 | 2026-08-14 | 미확인(20배 추정) | ✗ 불가 |
 | (한미반도체 계약) | 한미반도체 | 2026-08-14 전후 | 미확인 | ✗ 불가 |
-| (KODEX 200 계약) | KODEX 200 ETF | 미확인 | 미확인 | ✗ 불가 |
+| KODEX200USDT | 삼성 KODEX 200 ETF(코스피200 추종) | 미확인 | 미확인 | ✗ 불가 |
 
 ### 🇰🇷 한국 관련이지만 미국(NYSE) 상장 ETF·ADR 경유 (한국인 거래 **가능**)
 
@@ -165,6 +165,8 @@ NYSE 상장)가 이에 해당합니다.
 | RDDTUSDT | 레딧(Reddit) | 미확인 |
 | RKLBUSDT | 로켓랩(Rocket Lab) | 미확인 |
 | RIVNUSDT | 리비안(Rivian Automotive) | 미확인 |
+| KLACUSDT | KLA(반도체 장비) | 미확인 |
+| KOUSDT | 코카콜라(Coca-Cola) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -193,6 +195,7 @@ NYSE 상장)가 이에 해당합니다.
 | ZHIPUUSDT | 즈푸AI(Zhipu AI) 기업가치 | 2026-07-17 | Pre-IPO 계열 상품 특성상 10배 추정, 정확한 수치 미확인 |
 | UNITREEUSDT | 유니트리(Unitree Technology, 로봇 제조사) 기업가치 | 미확인 | Pre-IPO 계열 추정, 미확인 |
 | PDDUSDT | PDD Holdings(핀둬둬·테무 모기업, 나스닥 상장) | 미확인 | 미확인 |
+| KSTRUSDT | KraneShares STAR Market 50 ETF(상하이 커촹반 지수) | 미확인 | 미확인 |
 
 ### 🇯🇵 일본 (한국인 거래 가능)
 
