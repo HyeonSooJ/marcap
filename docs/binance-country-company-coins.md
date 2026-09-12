@@ -73,7 +73,7 @@ NYSE 상장)가 이에 해당합니다.
 |---|---|---|---|
 | EWYUSDT | iShares MSCI South Korea ETF(EWY, NYSE) | 최대 10배 | ✓ 가능 |
 | KORUUSDT | Direxion Daily South Korea Bull 3X ETF(KORU, NYSE) | 20배 → 50배 (ETF 자체 3배와 겹치면 이론상 코스피 등락률의 최대 **150배** 효과) | ✓ 가능 |
-| SKHYUSDT | SK Hynix ADR(미국 상장 주식예탁증서) | 미확인 | ✓ 가능 |
+| SKHYUSDT | SK Hynix ADR(미국 상장 주식예탁증서) | 최대 50배(앱 레버리지 슬라이더 확인, 기본값 20배) | ✓ 가능 |
 | SKUUSDT | GraniteShares 2x Long SK Hynix ETF(2배 레버리지) | 미확인 | ✓ 가능 |
 | SKDDUSDT | GraniteShares 2x Short SK Hynix ETF(2배 인버스) | 미확인 | ✓ 가능 |
 | CSOPSKHYNIX2LUSDT | CSOP SK Hynix Daily (2x) Leveraged Product | 미확인 | 미확인(홍콩 CSOP운용사 상품 추정, 재확인 필요) |
