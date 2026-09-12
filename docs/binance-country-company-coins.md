@@ -204,6 +204,9 @@ NYSE 상장)가 이에 해당합니다.
 | IONQUSDT | 아이온큐(IonQ, 양자컴퓨팅) | 미확인 |
 | IRENUSDT | IREN Limited(비트코인 채굴·데이터센터, 나스닥 상장) | 미확인(호주 출신 기업, 국가 분류 재확인 필요) |
 | BEUSDT | 블룸에너지(Bloom Energy, 연료전지) | 미확인 |
+| BMNRUSDT | 비트마인이머전테크놀로지스(BitMine Immersion Technologies) | 미확인 |
+| BITOUSDT | ProShares Bitcoin ETF(BITO, 비트코인 선물 추종 ETF) | 미확인 |
+| BNCUSDT | CEA Industries | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -290,6 +293,12 @@ NYSE 상장)가 이에 해당합니다.
 |---|---|---|
 | NVOUSDT | 노보노디스크(Novo Nordisk, 제약) | 미확인 |
 
+### 🇮🇹 이탈리아 (한국인 거래 가능)
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| BSPUSDT | 벤딩스푼스(Bending Spoons, 앱 개발사) | 미확인 |
+
 ### 🪙 원자재 (한국인 거래 가능)
 
 | 티커 | 기초자산 | 상장일 | 최대 레버리지 |
@@ -341,6 +350,7 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 | 네덜란드 | ASML 관련(세부 미확인), NBISUSDT(추정) | ✓ 가능(추정) |
 | 핀란드 | NOKUSDT(노키아) | ✓ 가능 |
 | 덴마크 | NVOUSDT(노보노디스크) | ✓ 가능 |
+| 이탈리아 | BSPUSDT(벤딩스푼스) | ✓ 가능 |
 | 원자재 | XAU/XAG/XPT/XPD/NATGAS(금·은·백금·팔라듐·천연가스) | ✓ 가능 |
 
 ## 유의사항 (반드시 읽어주세요)
