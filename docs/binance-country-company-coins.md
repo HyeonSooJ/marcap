@@ -138,6 +138,8 @@ NYSE 상장)가 이에 해당합니다.
 | SOXLUSDT | Direxion Daily Semiconductor Bull 3X(반도체 **3배 롱**) | 미확인 |
 | SOXSUSDT | Direxion Daily Semiconductor Bear 3X(반도체 **3배 숏/인버스**) | 미확인 |
 | SNXXUSDT | Tradr 2X Long SNDK ETF(샌디스크 2배 롱) | 미확인 |
+| MVLLUSDT | GraniteShares 2x Long MRVL Daily ETF(마벨 2배 롱) | 미확인 |
+| MUUUSDT | Direxion Daily MU Bull 2X(마이크론 2배 롱) | 미확인 |
 | URNMUSDT | Sprott Uranium Miners ETF(우라늄 채굴 섹터 ETF) | 미확인 |
 | LYTEUSDT | Roundhill Photonics & Optics ETF(광학·포토닉스 섹터 ETF) | 미확인 |
 
@@ -172,6 +174,9 @@ NYSE 상장)가 이에 해당합니다.
 | LITEUSDT | 루멘텀(Lumentum, 광학부품) | 미확인 |
 | LRCXUSDT | 램리서치(Lam Research, 반도체 장비) | 미확인 |
 | MARAUSDT | 마라홀딩스(MARA Holdings, 비트코인 채굴) | 미확인 |
+| MRKUSDT | 머크(Merck & Co., 제약) | 미확인 |
+| MSTRUSDT | 스트래티지(Strategy Inc, 옛 마이크로스트래티지) 보통주 | 미확인 |
+| MUUSDT | 마이크론(Micron Technology, 메모리반도체) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
