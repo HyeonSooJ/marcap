@@ -58,17 +58,28 @@ NYSE 상장)가 이에 해당합니다.
 | SKHYNIXUSDT | SK하이닉스 | 2026-06-02 | 20배 → 50배로 확대 | ✗ 불가 |
 | HYUNDAIUSDT | 현대자동차 | 2026-06-02 | 20배(50배 확대 여부 미확인) | ✗ 불가 |
 | NAVERUSDT | 네이버 | 2026-08-14 | 최대 20배 | ✗ 불가 |
+| SAMSUNGEMUSDT | 삼성전기(Samsung Electro-Mechanics) | 미확인 | 미확인 | ✗ 불가 |
 | (LG전자 계약) | LG전자 | 2026-08-14 | 미확인(20배 추정) | ✗ 불가 |
-| (삼성전기 계약) | 삼성전기 | 2026-08-14 전후 | 미확인 | ✗ 불가 |
 | (한미반도체 계약) | 한미반도체 | 2026-08-14 전후 | 미확인 | ✗ 불가 |
 | (KODEX 200 계약) | KODEX 200 ETF | 미확인 | 미확인 | ✗ 불가 |
 
-### 🇰🇷 한국 관련이지만 미국(NYSE) 상장 ETF 추종 (한국인 거래 **가능**)
+### 🇰🇷 한국 관련이지만 미국(NYSE) 상장 ETF·ADR 경유 (한국인 거래 **가능**)
 
-| 티커 | 기초자산 | 상장일 | 최대 레버리지 | 한국인 거래 |
-|---|---|---|---|---|
-| EWYUSDT | iShares MSCI South Korea ETF(EWY) | 2026-03-16 | 최대 10배 | ✓ 가능 |
-| KORUUSDT | Direxion Daily South Korea Bull 3X ETF(KORU) | 2026-06-22 | 20배 → 50배로 확대 (ETF 자체 3배와 겹치면 이론상 코스피 등락률의 최대 **150배** 효과) | ✓ 가능 |
+같은 회사를 추종해도 **KRX 원주 직접 상품은 차단**, **미국 상장 ADR·
+레버리지 ETF 경유 상품은 허용**되는 패턴이 SK하이닉스에서도 그대로
+확인됩니다.
+
+| 티커 | 기초자산 | 최대 레버리지 | 한국인 거래 |
+|---|---|---|---|
+| EWYUSDT | iShares MSCI South Korea ETF(EWY, NYSE) | 최대 10배 | ✓ 가능 |
+| KORUUSDT | Direxion Daily South Korea Bull 3X ETF(KORU, NYSE) | 20배 → 50배 (ETF 자체 3배와 겹치면 이론상 코스피 등락률의 최대 **150배** 효과) | ✓ 가능 |
+| SKHYUSDT | SK Hynix ADR(미국 상장 주식예탁증서) | 미확인 | ✓ 가능 |
+| SKUUSDT | GraniteShares 2x Long SK Hynix ETF(2배 레버리지) | 미확인 | ✓ 가능 |
+| SKDDUSDT | GraniteShares 2x Short SK Hynix ETF(2배 인버스) | 미확인 | ✓ 가능 |
+
+같은 "SK하이닉스"라도 `SKHYNIXUSDT`(KRX 원주 직접)는 위 표처럼 한국인
+차단, `SKHYUSDT`/`SKUUSDT`/`SKDDUSDT`(미국 상장 ADR·레버리지ETF 경유)는
+거래 가능— 헷갈리기 쉬우니 주의.
 
 ### 🇺🇸 미국 (한국인 거래 가능)
 
@@ -86,6 +97,7 @@ NYSE 상장)가 이에 해당합니다.
 | SNDKUSDT | 샌디스크(SanDisk) | 미확인 | 미확인 (나스닥 대비 거래량 비중 20%+로 활발) |
 | WENUSDT | 웬디스(Wendy's) | 미확인 | 미확인 |
 | WDCUSDT | 웨스턴디지털(Western Digital) | 미확인 | 미확인(타 거래소 기준 10배 사례 있음) |
+| SMCIUSDT | 슈퍼마이크로컴퓨터(Super Micro Computer) | 미확인 | 미확인 |
 
 **미국 섹터 ETF** — 개별 종목이 아니라 산업 섹터 전체를 추종:
 
@@ -93,6 +105,13 @@ NYSE 상장)가 이에 해당합니다.
 |---|---|---|
 | XLEUSDT | Energy Select Sector SPDR Fund(에너지 섹터 ETF) | 미확인 |
 | XBIUSDT | SPDR S&P Biotech ETF(바이오테크 섹터 ETF) | 최대 20배 |
+| SMHUSDT | VanEck Semiconductor ETF(반도체 섹터 ETF) | 미확인 |
+
+### 🇨🇦 캐나다 (한국인 거래 가능)
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| SHOPUSDT | 쇼피파이(Shopify, 캐나다 이커머스 기업) | 미확인 |
 
 이 외에도 180개 계약 중 대다수가 미국 개별주·ETF라 전부 나열하기는
 어렵습니다. 한국인 계정에 대한 별도 차단 보도는 없습니다.
@@ -145,6 +164,14 @@ NYSE 상장)가 이에 해당합니다.
 입니다. 테더가 발행한 금 1온스 담보 스테이블코인형 토큰이지, 바이낸스의
 TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 
+### ⚽ 참고: 팬토큰(별개 상품군)
+
+목록 중 `SANTOSUSDT`("Santos FC Fan Token")처럼 스포츠 구단 팬토큰이
+섞여 나올 때가 있습니다. 이는 Chiliz/Socios 계열의 **팬토큰**으로 이
+문서가 다루는 TradFi 무기한 선물과는 완전히 다른 상품군입니다(브라질
+구단 산투스 FC 팬토큰). 국가 연관성은 있지만 주가·지수를 추종하진
+않으므로 레버리지 개념 자체가 다릅니다.
+
 ### 비상장 기업 (Pre-IPO 프록시, 한국인 거래 가능 추정)
 
 - SpaceX(미국) — 상장 전 기업가치에 노출되는 계약. 2026년 7월 출시, USD1
@@ -157,9 +184,10 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 
 | 국가 | 대표 종목(바이낸스 티커) | 한국인 거래 가능? |
 |---|---|---|
-| 한국(KRX 원주) | SAMSUNGUSDT, SKHYNIXUSDT, HYUNDAIUSDT, NAVERUSDT 등 | ✗ 불가 |
-| 한국(미국 상장 ETF 경유) | EWYUSDT, KORUUSDT | ✓ 가능 |
-| 미국 | TSLAUSDT, AAPLUSDT, NVDAUSDT 등 다수 | ✓ 가능 |
+| 한국(KRX 원주) | SAMSUNGUSDT, SKHYNIXUSDT, HYUNDAIUSDT, NAVERUSDT, SAMSUNGEMUSDT 등 | ✗ 불가 |
+| 한국(미국 상장 ETF·ADR 경유) | EWYUSDT, KORUUSDT, SKHYUSDT, SKUUSDT, SKDDUSDT | ✓ 가능 |
+| 미국 | TSLAUSDT, AAPLUSDT, NVDAUSDT, SMCIUSDT 등 다수 | ✓ 가능 |
+| 캐나다 | SHOPUSDT(쇼피파이) | ✓ 가능 |
 | 중국 | BABAUSDT, TENCENTUSDT, XIAOMIUSDT 등 | ✓ 가능 |
 | 일본 | SONYUSDT | ✓ 가능 |
 | 대만 | TSMUSDT | ✓ 가능 |
