@@ -140,6 +140,7 @@ NYSE 상장)가 이에 해당합니다.
 | SNXXUSDT | Tradr 2X Long SNDK ETF(샌디스크 2배 롱) | 미확인 |
 | MVLLUSDT | GraniteShares 2x Long MRVL Daily ETF(마벨 2배 롱) | 미확인 |
 | MUUUSDT | Direxion Daily MU Bull 2X(마이크론 2배 롱) | 미확인 |
+| DRAMUSDT | Roundhill Memory ETF(메모리반도체 섹터 ETF) | 미확인 |
 | URNMUSDT | Sprott Uranium Miners ETF(우라늄 채굴 섹터 ETF) | 미확인 |
 | LYTEUSDT | Roundhill Photonics & Optics ETF(광학·포토닉스 섹터 ETF) | 미확인 |
 
@@ -181,6 +182,10 @@ NYSE 상장)가 이에 해당합니다.
 | NETUSDT | 클라우드플레어(Cloudflare) | 미확인 |
 | NOWUSDT | 서비스나우(ServiceNow) | 미확인 |
 | ONDSUSDT | 온다스홀딩스(Ondas Holdings, 드론) | 미확인(회사명 표시 기준, 재확인 권장) |
+| DISUSDT | 디즈니(Disney) | 미확인 |
+| DELLUSDT | 델(Dell) | 미확인 |
+| DKNGUSDT | 드래프트킹스(DraftKings, 스포츠베팅) | 미확인 |
+| EBAYUSDT | 이베이(eBay) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -212,6 +217,7 @@ NYSE 상장)가 이에 해당합니다.
 | UNITREEUSDT | 유니트리(Unitree Technology, 로봇 제조사) 기업가치 | 미확인 | Pre-IPO 계열 추정, 미확인 |
 | PDDUSDT | PDD Holdings(핀둬둬·테무 모기업, 나스닥 상장) | 미확인 | 미확인 |
 | KSTRUSDT | KraneShares STAR Market 50 ETF(상하이 커촹반 지수) | 미확인 | 미확인 |
+| CXMTUSDT | CXMT(창신메모리, 중국 메모리반도체 제조사) | 미확인 | 미확인 |
 
 ### 🇯🇵 일본 (한국인 거래 가능)
 
