@@ -207,6 +207,10 @@ NYSE 상장)가 이에 해당합니다.
 | BMNRUSDT | 비트마인이머전테크놀로지스(BitMine Immersion Technologies) | 미확인 |
 | BITOUSDT | ProShares Bitcoin ETF(BITO, 비트코인 선물 추종 ETF) | 미확인 |
 | BNCUSDT | CEA Industries | 미확인 |
+| BXUSDT | 블랙스톤(Blackstone) | 미확인 |
+| CBRSUSDT | 세레브라스(Cerebras Systems, AI칩) | 미확인 |
+| CATUSDT | 캐터필러(Caterpillar) | 미확인 |
+| CIENUSDT | 시에나(Ciena, 네트워크장비) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -241,6 +245,7 @@ NYSE 상장)가 이에 해당합니다.
 | KSTRUSDT | KraneShares STAR Market 50 ETF(상하이 커촹반 지수) | 미확인 | 미확인 |
 | CXMTUSDT | CXMT(창신메모리, 중국 메모리반도체 제조사) | 미확인 | 미확인 |
 | GIGADEVUSDT | 기가디바이스(GigaDevice Semiconductor) | 미확인 | 미확인 |
+| BYDUSDT | 비야디(BYD, 전기차) | 미확인 | 미확인 |
 | HK0700USDT | 텐센트(홍콩 종목코드 0700 표기, TENCENTUSDT와 별개 티커) | 미확인 | 미확인 |
 | HK0625USDT | SHEIN(홍콩 종목코드 스타일 표기, 중국 패스트패션) | 미확인 | 미확인 |
 | HK1810USDT | 샤오미(홍콩 종목코드 표기, XIAOMIUSDT와 별개 티커) | 미확인 | 미확인 |
@@ -308,6 +313,8 @@ NYSE 상장)가 이에 해당합니다.
 | XPTUSDT | 백금(Platinum) | 2026-01-30 | 최대 100배 |
 | XPDUSDT | 팔라듐(Palladium) | 2026-01-30 | 최대 100배 |
 | NATGASUSDT | 천연가스(Natural Gas) | 미확인 | 미확인 |
+| BZUSDT | 브렌트유(Brent Oil) | 미확인 | 미확인 |
+| CLUSDT | WTI 원유(WTI Crude Oil) | 미확인 | 미확인 |
 
 이 넷이 TradFi 무기한 선물 카테고리의 최초 상품군이며, 국가·기업 테마는
 아니지만 같은 상품군이라 참고로 기재.
