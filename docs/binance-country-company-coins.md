@@ -60,7 +60,7 @@ NYSE 상장)가 이에 해당합니다.
 | NAVERUSDT | 네이버 | 2026-08-14 | 최대 20배 | ✗ 불가 |
 | SAMSUNGEMUSDT | 삼성전기(Samsung Electro-Mechanics) | 미확인 | 미확인 | ✗ 불가 |
 | LGELECTRONICSUSDT | LG전자 | 2026-08-14 | 미확인(20배 추정) | ✗ 불가 |
-| (한미반도체 계약) | 한미반도체 | 2026-08-14 전후 | 미확인 | ✗ 불가 |
+| HANMIUSDT | 한미반도체(HANMI Semiconductor) | 2026-08-14 전후 | 미확인 | ✗ 불가 |
 | KODEX200USDT | 삼성 KODEX 200 ETF(코스피200 추종) | 미확인 | 미확인 | ✗ 불가 |
 
 ### 🇰🇷 한국 관련이지만 미국(NYSE) 상장 ETF·ADR 경유 (한국인 거래 **가능**)
@@ -191,6 +191,10 @@ NYSE 상장)가 이에 해당합니다.
 | GMEUSDT | 게임스탑(GameStop) | 미확인 |
 | GLWUSDT | 코닝(Corning) | 미확인 |
 | GEVUSDT | GE 버노바(GE Vernova, 에너지) | 미확인 |
+| GPROUSDT | 고프로(GoPro) | 미확인 |
+| GSUSDT | 골드만삭스(Goldman Sachs) | 미확인 |
+| HDUSDT | 홈디포(Home Depot) | 미확인 |
+| HIMSUSDT | 힘스앤허스(Hims & Hers, 헬스케어) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -224,6 +228,8 @@ NYSE 상장)가 이에 해당합니다.
 | KSTRUSDT | KraneShares STAR Market 50 ETF(상하이 커촹반 지수) | 미확인 | 미확인 |
 | CXMTUSDT | CXMT(창신메모리, 중국 메모리반도체 제조사) | 미확인 | 미확인 |
 | GIGADEVUSDT | 기가디바이스(GigaDevice Semiconductor) | 미확인 | 미확인 |
+| HK0700USDT | 텐센트(홍콩 종목코드 0700 표기, TENCENTUSDT와 별개 티커) | 미확인 | 미확인 |
+| HK0625USDT | SHEIN(홍콩 종목코드 스타일 표기, 중국 패스트패션) | 미확인 | 미확인 |
 
 ### 🇯🇵 일본 (한국인 거래 가능)
 
