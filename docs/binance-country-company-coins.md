@@ -277,7 +277,7 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 - SpaceX(미국, `SPCXUSDT`/`SPCXUSD1`) — 상장 전 기업가치에 노출되는 계약.
   2026년 7월 출시, USD1 스테이블코인으로 결제하는 버전도 있음. 레버리지
   미확인.
-- OpenAI(미국) — 2026-05-26 출시, Pre-IPO Perpetual Contracts 계열
+- OpenAI(미국, `OPENAIUSDT`) — 2026-05-26 출시, Pre-IPO Perpetual Contracts 계열
   두 번째 상품. 레버리지 미확인.
 - 즈푸AI(중국, ZHIPUUSDT) — 위 중국 표 참고.
 
