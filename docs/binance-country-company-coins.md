@@ -222,6 +222,10 @@ NYSE 상장)가 이에 해당합니다.
 | CRCLUSDT | 서클(Circle, USDC 발행사) | 미확인 |
 | COSTUSDT | 코스트코(Costco) | 미확인 |
 | AAOIUSDT | 어플라이드옵토일렉트로닉스(Applied Optoelectronics, 광학부품) | 미확인 |
+| ADBEUSDT | 어도비(Adobe) | 미확인 |
+| ALABUSDT | 아스테라랩스(Astera Labs, 반도체) | 미확인 |
+| AMDUSDT | AMD | 미확인 |
+| AMATUSDT | 어플라이드머티어리얼즈(Applied Materials, 반도체장비) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -337,11 +341,12 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 
 ### ⚽ 참고: 팬토큰(별개 상품군)
 
-목록 중 `SANTOSUSDT`("Santos FC Fan Token")처럼 스포츠 구단 팬토큰이
+목록 중 `SANTOSUSDT`("Santos FC Fan Token", 브라질 산투스 FC), `ALPINEUSDT`
+("Alpine F1 Team Fan Token", 프랑스 알핀 F1팀)처럼 스포츠 구단 팬토큰이
 섞여 나올 때가 있습니다. 이는 Chiliz/Socios 계열의 **팬토큰**으로 이
-문서가 다루는 TradFi 무기한 선물과는 완전히 다른 상품군입니다(브라질
-구단 산투스 FC 팬토큰). 국가 연관성은 있지만 주가·지수를 추종하진
-않으므로 레버리지 개념 자체가 다릅니다.
+문서가 다루는 TradFi 무기한 선물과는 완전히 다른 상품군입니다. 국가
+연관성은 있지만 주가·지수를 추종하진 않으므로 레버리지 개념 자체가
+다릅니다.
 
 ### 비상장 기업 (Pre-IPO 프록시, 한국인 거래 가능 추정)
 
@@ -351,6 +356,8 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 - OpenAI(미국, `OPENAIUSDT`) — 2026-05-26 출시, Pre-IPO Perpetual Contracts 계열
   두 번째 상품. 레버리지 미확인.
 - 즈푸AI(중국, ZHIPUUSDT) — 위 중국 표 참고.
+- Anthropic(미국, `ANTHROPICUSDT`) — 화면에 "Pre-M"(Pre-Market) 표시로
+  확인됨. 레버리지 미확인.
 
 ## 요약: 국가별 한 줄 정리
 
