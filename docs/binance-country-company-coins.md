@@ -140,6 +140,7 @@ NYSE 상장)가 이에 해당합니다.
 | SNXXUSDT | Tradr 2X Long SNDK ETF(샌디스크 2배 롱) | 미확인 |
 | MVLLUSDT | GraniteShares 2x Long MRVL Daily ETF(마벨 2배 롱) | 미확인 |
 | MUUUSDT | Direxion Daily MU Bull 2X(마이크론 2배 롱) | 미확인 |
+| INTWUSDT | GraniteShares 2x Long INTC ETF(인텔 2배 롱) | 미확인 |
 | DRAMUSDT | Roundhill Memory ETF(메모리반도체 섹터 ETF) | 미확인 |
 | GDXUSDT | VanEck Gold Miners ETF(금광업 섹터 ETF) | 미확인 |
 | URNMUSDT | Sprott Uranium Miners ETF(우라늄 채굴 섹터 ETF) | 미확인 |
@@ -195,6 +196,11 @@ NYSE 상장)가 이에 해당합니다.
 | GSUSDT | 골드만삭스(Goldman Sachs) | 미확인 |
 | HDUSDT | 홈디포(Home Depot) | 미확인 |
 | HIMSUSDT | 힘스앤허스(Hims & Hers, 헬스케어) | 미확인 |
+| HOODUSDT | 로빈후드(Robinhood) | 미확인 |
+| HPEUSDT | 휴렛팩커드엔터프라이즈(HPE) | 미확인 |
+| IBMUSDT | IBM | 미확인 |
+| INTCUSDT | 인텔(Intel) | 미확인 |
+| IONQUSDT | 아이온큐(IonQ, 양자컴퓨팅) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -230,6 +236,8 @@ NYSE 상장)가 이에 해당합니다.
 | GIGADEVUSDT | 기가디바이스(GigaDevice Semiconductor) | 미확인 | 미확인 |
 | HK0700USDT | 텐센트(홍콩 종목코드 0700 표기, TENCENTUSDT와 별개 티커) | 미확인 | 미확인 |
 | HK0625USDT | SHEIN(홍콩 종목코드 스타일 표기, 중국 패스트패션) | 미확인 | 미확인 |
+| HK1810USDT | 샤오미(홍콩 종목코드 표기, XIAOMIUSDT와 별개 티커) | 미확인 | 미확인 |
+| HK0992USDT | 레노버(Lenovo, 홍콩 종목코드 표기) | 미확인 | 미확인 |
 
 ### 🇯🇵 일본 (한국인 거래 가능)
 
