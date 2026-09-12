@@ -23,6 +23,19 @@
 - 레버리지는 상장 초기보다 나중에 상향되는 경우가 많아(예: 20배→50배)
   아래 표의 수치도 계속 바뀔 수 있습니다.
 
+## 바이낸스 앱 목록에서 TradFi(주식) 종목 구분하는 법
+
+Futures "All" 탭은 크립토·TradFi·Pre-IPO가 전부 섞여서 알파벳순으로
+나열됩니다. 티커 밑에 작게 표시되는 이름으로 구분하세요.
+
+- **TradFi(주식) 종목**: 밑에 실제 회사명이 뜸 — 예) SAMSUNGUSDT 밑에
+  "Samsung Electronics", ZSUSDT 밑에 "Zscaler", ZMUSDT 밑에 "Zoom".
+- **일반 크립토 종목**: 밑에 블록체인 프로젝트명이 뜸 — 예) ZRXUSDT 밑에
+  "0x", ZILUSDT 밑에 "Zilliqa", ZECUSDT 밑에 "Zcash". 이런 것들은 국가
+  주식과 무관한 순수 암호화폐입니다.
+- 또는 상단 필터에서 **TradFi** 탭이나 **Pre-IPO** 탭을 누르면 크립토를
+  제외하고 주식/ETF/비상장기업 관련 계약만 걸러볼 수 있습니다.
+
 ## 한국인 거래 가능 여부의 핵심 규칙
 
 바이낸스는 **한국거래소(KRX)에 원주가 상장된 종목/ETF를 그대로 추종하는
@@ -66,7 +79,10 @@ NYSE 상장)가 이에 해당합니다.
 | MSFTUSDT / AVGOUSDT | 마이크로소프트/브로드컴 | 2026-04-20 | 10배 |
 | DDOGUSDT / TEAMUSDT / MDBUSDT / ZSUSDT / GTLBUSDT | Datadog/Atlassian/MongoDB/Zscaler/GitLab | 2026-09-02 | 20배 |
 | NVDLUSDT / TSLLUSDT | NVDA 2배 레버리지 ETF / TSLA 2배 레버리지 ETF | 2026-09-02 | 20배 |
-| SOXLUSDT | 미국 반도체 3배 레버리지 ETF | 미확인 | 미확인 |
+| ZMUSDT | 줌(Zoom) | 미확인 | 미확인 (바이낸스 앱 자체가 "Zoom"으로 표시) |
+| SOXLUSDT | 미국 반도체 3배 레버리지 ETF | 2026-05-15~18 | 미확인 |
+| MRVLUSDT / CRWVUSDT / WMTUSDT / JPMUSDT / VUSDT / BRKBUSDT | 마벨/코어위브/월마트/JP모건/비자/버크셔해서웨이 | 2026-05-15~18 | 미확인 |
+| DJTUSDT / MRNAUSDT | 트럼프미디어(Trump Media)/모더나(Moderna) | 2026-08-25 | 미확인 (같은 날 반도체 ETF 3종도 추가) |
 | SNDKUSDT | 샌디스크(SanDisk) | 미확인 | 미확인 (나스닥 대비 거래량 비중 20%+로 활발) |
 
 이 외에도 180개 계약 중 대다수가 미국 개별주·ETF라 전부 나열하기는
@@ -82,6 +98,8 @@ NYSE 상장)가 이에 해당합니다.
 | XIAOMIUSDT | 샤오미 | 미확인 | 미확인 |
 | KUAISHOUUSDT | 콰이쇼우 | 미확인 | 미확인 |
 | POPMARTUSDT | 팝마트 | 미확인 | 미확인 |
+| ZHONGJIUSDT | 중제쉬촹(ZhongJi Innolight, 中際旭創, 광모듈 제조사) | 미확인 | 20배 |
+| ZHIPUUSDT | 즈푸AI(Zhipu AI) 기업가치 | 2026-07-17 | Pre-IPO 계열 상품 특성상 10배 추정, 정확한 수치 미확인 |
 
 ### 🇯🇵 일본 (한국인 거래 가능)
 
@@ -102,10 +120,23 @@ NYSE 상장)가 이에 해당합니다.
 - ASML(네덜란드, 유럽 최대 반도체 장비사) 관련 계약이 존재한다는 언급은
   있으나 정확한 티커명·상장일·레버리지는 이번 조사에서 확정하지 못함.
 
+### 🪙 원자재 (한국인 거래 가능)
+
+| 티커 | 기초자산 | 상장일 | 최대 레버리지 |
+|---|---|---|---|
+| XAUUSDT | 금(Gold) | 2026-01-05 | 최대 50배 |
+| XAGUSDT | 은(Silver) | 2026-01-07 | 최대 50배 |
+
+이 둘이 TradFi 무기한 선물 카테고리의 최초 상품이며, 국가·기업 테마는
+아니지만 같은 상품군이라 참고로 기재.
+
 ### 비상장 기업 (Pre-IPO 프록시, 한국인 거래 가능 추정)
 
-- SpaceX — 상장 전 기업가치에 노출되는 계약. 2026년 7월 출시, USD1
+- SpaceX(미국) — 상장 전 기업가치에 노출되는 계약. 2026년 7월 출시, USD1
   스테이블코인으로 결제. 레버리지 미확인.
+- OpenAI(미국) — 2026-05-26 출시, Pre-IPO Perpetual Contracts 계열
+  두 번째 상품. 레버리지 미확인.
+- 즈푸AI(중국, ZHIPUUSDT) — 위 중국 표 참고.
 
 ## 요약: 국가별 한 줄 정리
 
