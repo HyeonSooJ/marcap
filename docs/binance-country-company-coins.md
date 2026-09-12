@@ -91,13 +91,25 @@ NYSE 상장)가 이에 해당합니다.
 | DDOGUSDT / TEAMUSDT / MDBUSDT / ZSUSDT / GTLBUSDT | Datadog/Atlassian/MongoDB/Zscaler/GitLab | 2026-09-02 | 20배 |
 | NVDLUSDT / TSLLUSDT | NVDA 2배 레버리지 ETF / TSLA 2배 레버리지 ETF | 2026-09-02 | 20배 |
 | ZMUSDT | 줌(Zoom) | 미확인 | 미확인 (바이낸스 앱 자체가 "Zoom"으로 표시) |
-| SOXLUSDT | 미국 반도체 3배 레버리지 ETF | 2026-05-15~18 | 미확인 |
 | MRVLUSDT / CRWVUSDT / WMTUSDT / JPMUSDT / VUSDT / BRKBUSDT | 마벨/코어위브/월마트/JP모건/비자/버크셔해서웨이 | 2026-05-15~18 | 미확인 |
 | DJTUSDT / MRNAUSDT | 트럼프미디어(Trump Media)/모더나(Moderna) | 2026-08-25 | 미확인 (같은 날 반도체 ETF 3종도 추가) |
 | SNDKUSDT | 샌디스크(SanDisk) | 미확인 | 미확인 (나스닥 대비 거래량 비중 20%+로 활발) |
 | WENUSDT | 웬디스(Wendy's) | 미확인 | 미확인 |
 | WDCUSDT | 웨스턴디지털(Western Digital) | 미확인 | 미확인(타 거래소 기준 10배 사례 있음) |
 | SMCIUSDT | 슈퍼마이크로컴퓨터(Super Micro Computer) | 미확인 | 미확인 |
+| SOFIUSDT | 소파이(SoFi Technologies, 핀테크) | 미확인 | 미확인 |
+| SNOWUSDT | 스노우플레이크(Snowflake) | 미확인 | 미확인 |
+
+**미국 지수 추종 ETF** — 개별 종목·섹터가 아니라 시장 전체 지수를 추종
+(사용자가 처음 예시로 든 "코루/EWY"와 가장 유사한 성격의 상품):
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| SPYUSDT | State Street SPDR S&P 500 ETF(S&P500 지수) | 미확인 |
+| SQQQUSDT | ProShares UltraPro Short QQQ(나스닥100 **-3배** 인버스) | 미확인 |
+
+**주의**: `SPXUSDT`는 S&P500과 무관한 밈코인 "SPX6900"입니다. 티커가
+비슷해 헷갈리기 쉬우니 진짜 S&P500 상품은 `SPYUSDT`인 점에 유의하세요.
 
 **미국 섹터 ETF** — 개별 종목이 아니라 산업 섹터 전체를 추종:
 
@@ -106,6 +118,9 @@ NYSE 상장)가 이에 해당합니다.
 | XLEUSDT | Energy Select Sector SPDR Fund(에너지 섹터 ETF) | 미확인 |
 | XBIUSDT | SPDR S&P Biotech ETF(바이오테크 섹터 ETF) | 최대 20배 |
 | SMHUSDT | VanEck Semiconductor ETF(반도체 섹터 ETF) | 미확인 |
+| SOXLUSDT | Direxion Daily Semiconductor Bull 3X(반도체 **3배 롱**) | 미확인 |
+| SOXSUSDT | Direxion Daily Semiconductor Bear 3X(반도체 **3배 숏/인버스**) | 미확인 |
+| SNXXUSDT | Tradr 2X Long SNDK ETF(샌디스크 2배 롱) | 미확인 |
 
 ### 🇨🇦 캐나다 (한국인 거래 가능)
 
@@ -174,8 +189,9 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 
 ### 비상장 기업 (Pre-IPO 프록시, 한국인 거래 가능 추정)
 
-- SpaceX(미국) — 상장 전 기업가치에 노출되는 계약. 2026년 7월 출시, USD1
-  스테이블코인으로 결제. 레버리지 미확인.
+- SpaceX(미국, `SPCXUSDT`/`SPCXUSD1`) — 상장 전 기업가치에 노출되는 계약.
+  2026년 7월 출시, USD1 스테이블코인으로 결제하는 버전도 있음. 레버리지
+  미확인.
 - OpenAI(미국) — 2026-05-26 출시, Pre-IPO Perpetual Contracts 계열
   두 번째 상품. 레버리지 미확인.
 - 즈푸AI(중국, ZHIPUUSDT) — 위 중국 표 참고.
@@ -187,6 +203,7 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 | 한국(KRX 원주) | SAMSUNGUSDT, SKHYNIXUSDT, HYUNDAIUSDT, NAVERUSDT, SAMSUNGEMUSDT 등 | ✗ 불가 |
 | 한국(미국 상장 ETF·ADR 경유) | EWYUSDT, KORUUSDT, SKHYUSDT, SKUUSDT, SKDDUSDT | ✓ 가능 |
 | 미국 | TSLAUSDT, AAPLUSDT, NVDAUSDT, SMCIUSDT 등 다수 | ✓ 가능 |
+| 미국(지수 전체) | SPYUSDT(S&P500), SQQQUSDT(나스닥100 인버스) | ✓ 가능 |
 | 캐나다 | SHOPUSDT(쇼피파이) | ✓ 가능 |
 | 중국 | BABAUSDT, TENCENTUSDT, XIAOMIUSDT 등 | ✓ 가능 |
 | 일본 | SONYUSDT | ✓ 가능 |
