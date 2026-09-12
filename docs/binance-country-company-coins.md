@@ -109,6 +109,7 @@ NYSE 상장)가 이에 해당합니다.
 | 티커 | 기초자산 | 최대 레버리지 |
 |---|---|---|
 | TBTUSDT | ProShares UltraShort 20+ Year Treasury(20년 이상 미국 국채 **-2배** 인버스) | 미확인 |
+| TMFUSDT | Direxion Daily 20+ Year Treasury Bull 3X(20년 이상 미국 국채 **+3배** 레버리지) | 미확인 |
 
 **미국 지수 추종 ETF** — 개별 종목·섹터가 아니라 시장 전체 지수를 추종
 (사용자가 처음 예시로 든 "코루/EWY"와 가장 유사한 성격의 상품):
@@ -117,9 +118,13 @@ NYSE 상장)가 이에 해당합니다.
 |---|---|---|
 | SPYUSDT | State Street SPDR S&P 500 ETF(S&P500 지수) | 미확인 |
 | SQQQUSDT | ProShares UltraPro Short QQQ(나스닥100 **-3배** 인버스) | 미확인 |
+| TQQQUSDT | ProShares UltraPro QQQ(나스닥100 **+3배** 레버리지) | 미확인 |
+| TZAUSDT | Direxion Small Cap Bear 3X(미국 스몰캡 지수 **-3배** 인버스) | 미확인 |
 
 **주의**: `SPXUSDT`는 S&P500과 무관한 밈코인 "SPX6900"입니다. 티커가
 비슷해 헷갈리기 쉬우니 진짜 S&P500 상품은 `SPYUSDT`인 점에 유의하세요.
+마찬가지로 `TRUMPUSDT`/`TRUMPUSDC`("OFFICIAL TRUMP")도 트럼프미디어
+주식(DJTUSDT)과 무관한 별개의 밈코인입니다.
 
 **미국 섹터 ETF** — 개별 종목이 아니라 산업 섹터 전체를 추종:
 
@@ -131,6 +136,14 @@ NYSE 상장)가 이에 해당합니다.
 | SOXLUSDT | Direxion Daily Semiconductor Bull 3X(반도체 **3배 롱**) | 미확인 |
 | SOXSUSDT | Direxion Daily Semiconductor Bear 3X(반도체 **3배 숏/인버스**) | 미확인 |
 | SNXXUSDT | Tradr 2X Long SNDK ETF(샌디스크 2배 롱) | 미확인 |
+
+**미국 개별주 추가**:
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| UBERUSDT | 우버(Uber Technologies) | 미확인 |
+| TTWOUSDT | 테이크투 인터랙티브(Take-Two Interactive, GTA 제작사) | 미확인 |
+| TXNUSDT | 텍사스 인스트루먼트(Texas Instruments, 반도체) | 미확인 |
 
 ### 🇨🇦 캐나다 (한국인 거래 가능)
 
