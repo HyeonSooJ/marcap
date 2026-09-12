@@ -226,6 +226,8 @@ NYSE 상장)가 이에 해당합니다.
 | ALABUSDT | 아스테라랩스(Astera Labs, 반도체) | 미확인 |
 | AMDUSDT | AMD | 미확인 |
 | AMATUSDT | 어플라이드머티어리얼즈(Applied Materials, 반도체장비) | 미확인 |
+| APPUSDT | 애플로빈(AppLovin) | 미확인 |
+| ASTSUSDT | AST 스페이스모바일(AST SpaceMobile, 위성통신) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -294,12 +296,20 @@ NYSE 상장)가 이에 해당합니다.
 (독일 EWG, 영국 EWU, 인도 INDA 등)도 상장돼 있을 가능성이 높으니,
 "EW"로 시작하는 티커를 발견하면 이 문서에 추가해주세요.
 
-### 🇳🇱 네덜란드 (한국인 거래 가능, 세부 미확인)
+### 🇳🇱 네덜란드 (한국인 거래 가능)
 
-- ASML(유럽 최대 반도체 장비사) 관련 계약이 존재한다는 언급은 있으나
-  정확한 티커명·상장일·레버리지는 이번 조사에서 확정하지 못함.
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| ASMLUSDT | ASML(유럽 최대 반도체 장비사) | 미확인 |
+
 - NBISUSDT("Nebius", 옛 얀덱스(Yandex) 계열 AI클라우드 기업, 나스닥
   상장)도 회사명 표시로 볼 때 TradFi로 추정되나 국가·레버리지 재확인 필요.
+
+### 🇬🇧 영국 (한국인 거래 가능)
+
+| 티커 | 기초자산 | 최대 레버리지 |
+|---|---|---|
+| ARMUSDT | Arm Holdings(반도체 설계, 소프트뱅크 계열) | 미확인 |
 
 ### 🇫🇮 핀란드 (한국인 거래 가능)
 
@@ -373,7 +383,8 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
 | 일본 | SONYUSDT, PAYPUSDT, EWJUSDT(일본지수) | ✓ 가능 |
 | 대만 | TSMUSDT, EWTUSDT(대만지수) | ✓ 가능 |
 | 브라질 | EWZUSDT(브라질지수) | ✓ 가능 |
-| 네덜란드 | ASML 관련(세부 미확인), NBISUSDT(추정) | ✓ 가능(추정) |
+| 네덜란드 | ASMLUSDT, NBISUSDT(추정) | ✓ 가능 |
+| 영국 | ARMUSDT(Arm Holdings) | ✓ 가능 |
 | 핀란드 | NOKUSDT(노키아) | ✓ 가능 |
 | 덴마크 | NVOUSDT(노보노디스크) | ✓ 가능 |
 | 이탈리아 | BSPUSDT(벤딩스푼스) | ✓ 가능 |
