@@ -163,6 +163,8 @@ NYSE 상장)가 이에 해당합니다.
 | PYPLUSDT | 페이팔(PayPal) | 미확인 |
 | QCOMUSDT | 퀄컴(Qualcomm) | 미확인 |
 | RDDTUSDT | 레딧(Reddit) | 미확인 |
+| RKLBUSDT | 로켓랩(Rocket Lab) | 미확인 |
+| RIVNUSDT | 리비안(Rivian Automotive) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
