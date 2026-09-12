@@ -76,6 +76,8 @@ NYSE 상장)가 이에 해당합니다.
 | SKHYUSDT | SK Hynix ADR(미국 상장 주식예탁증서) | 미확인 | ✓ 가능 |
 | SKUUSDT | GraniteShares 2x Long SK Hynix ETF(2배 레버리지) | 미확인 | ✓ 가능 |
 | SKDDUSDT | GraniteShares 2x Short SK Hynix ETF(2배 인버스) | 미확인 | ✓ 가능 |
+| CSOPSKHYNIX2LUSDT | CSOP SK Hynix Daily (2x) Leveraged Product | 미확인 | 미확인(홍콩 CSOP운용사 상품 추정, 재확인 필요) |
+| CSOPSAMSUNG2LUSDT | CSOP Samsung Electronics Daily (2x) Leveraged Product | 미확인 | 미확인(홍콩 CSOP운용사 상품 추정, 재확인 필요) |
 
 같은 "SK하이닉스"라도 `SKHYNIXUSDT`(KRX 원주 직접)는 위 표처럼 한국인
 차단, `SKHYUSDT`/`SKUUSDT`/`SKDDUSDT`(미국 상장 ADR·레버리지ETF 경유)는
@@ -211,6 +213,14 @@ NYSE 상장)가 이에 해당합니다.
 | CBRSUSDT | 세레브라스(Cerebras Systems, AI칩) | 미확인 |
 | CATUSDT | 캐터필러(Caterpillar) | 미확인 |
 | CIENUSDT | 시에나(Ciena, 네트워크장비) | 미확인 |
+| COINUSDT | 코인베이스(Coinbase) | 미확인 |
+| COHRUSDT | 코히런트(Coherent, 광학) | 미확인 |
+| CRWDUSDT | 크라우드스트라이크(CrowdStrike, 보안) | 미확인 |
+| CRMUSDT | 세일즈포스(Salesforce) | 미확인 |
+| CSCOUSDT | 시스코(Cisco) | 미확인 |
+| CRDOUSDT | 크레도테크놀로지(Credo Technology, 반도체) | 미확인 |
+| CRCLUSDT | 서클(Circle, USDC 발행사) | 미확인 |
+| COSTUSDT | 코스트코(Costco) | 미확인 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -315,6 +325,7 @@ NYSE 상장)가 이에 해당합니다.
 | NATGASUSDT | 천연가스(Natural Gas) | 미확인 | 미확인 |
 | BZUSDT | 브렌트유(Brent Oil) | 미확인 | 미확인 |
 | CLUSDT | WTI 원유(WTI Crude Oil) | 미확인 | 미확인 |
+| COPPERUSDT | 구리(Copper) | 미확인 | 미확인 |
 
 이 넷이 TradFi 무기한 선물 카테고리의 최초 상품군이며, 국가·기업 테마는
 아니지만 같은 상품군이라 참고로 기재.
