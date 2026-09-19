@@ -121,8 +121,12 @@ PATTERN_DEFINITIONS = {
         'label': '상한가 후 거래량 지속형',
         'shape': None,
     },
-    'recent_pullback': {
-        'label': '최근 눌림목 후 재상승형',
+    'recent_pullback_bottom': {
+        'label': '눌림목형(저점 대기)',
+        'shape': None,
+    },
+    'recent_pullback_rebound': {
+        'label': '눌림목 반등형(살짝 반등)',
         'shape': None,
     },
     # 아래 2개는 "종류가 너무 많다"는 요청으로, 위 6개(sideways_breakout/
@@ -158,12 +162,14 @@ SURGE_MIN_MARCAP = 5_000_000_000
 SURGE_MIN_RECENT_AMOUNT = 100_000_000
 RISK_DEPT_KEYWORDS = ['관리종목', '투자주의환기종목', '투자경고종목', '투자위험종목', '거래정지']
 
-RECENT_PULLBACK_PATTERN_KEY = 'recent_pullback'
+RECENT_PULLBACK_BOTTOM_KEY = 'recent_pullback_bottom'
+RECENT_PULLBACK_REBOUND_KEY = 'recent_pullback_rebound'
 RECENT_PULLBACK_LOOKBACK_DAYS = 6
 RECENT_PULLBACK_MIN_PRIOR_RISE = 13.0
 RECENT_PULLBACK_MIN_PULLBACK = 3.0
 RECENT_PULLBACK_MAX_PULLBACK = 40.0
 RECENT_PULLBACK_TOP_N = 100
+RECENT_PULLBACK_MAX_WICK_TO_BODY = 2.0
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
@@ -444,20 +450,43 @@ def find_bottom_rebound_stocks(price_df, top_n=None, min_marcap=None, min_amount
     return result.sort_values('ReboundReturn', ascending=False).head(top_n).reset_index(drop=True)
 
 
+def _long_wick_candle(last_row, max_wick_to_body=RECENT_PULLBACK_MAX_WICK_TO_BODY):
+    """마지막 날 캔들(Open/High/Low/Close)의 위꼬리/아래꼬리 중 긴 쪽이 몸통 대비
+    너무 길면(방향성이 불분명한 도지형 등) True를 반환한다."""
+    o, h, l, c = last_row['Open'], last_row['High'], last_row['Low'], last_row['Close']
+    if pd.isna(o) or pd.isna(h) or pd.isna(l) or pd.isna(c):
+        return False
+    body = abs(c - o)
+    upper_wick = h - max(o, c)
+    lower_wick = min(o, c) - l
+    max_wick = max(upper_wick, lower_wick, 0.0)
+    if body <= 0:
+        return max_wick > 0
+    return (max_wick / body) > max_wick_to_body
+
+
 def _recent_pullback_metrics(
     group, lookback_days=RECENT_PULLBACK_LOOKBACK_DAYS,
     min_prior_rise=RECENT_PULLBACK_MIN_PRIOR_RISE, min_pullback=RECENT_PULLBACK_MIN_PULLBACK,
     max_pullback=RECENT_PULLBACK_MAX_PULLBACK, min_marcap=SURGE_MIN_MARCAP, min_amount=SURGE_MIN_RECENT_AMOUNT,
+    max_wick_to_body=RECENT_PULLBACK_MAX_WICK_TO_BODY,
 ):
     """최근 lookback_days(기본 6거래일) 안에서 "짧게 오르고 - 살짝 눌리고 - 아직
-    저점보다는 높은 채로 마감"인 종목의 (PriorRise%, Pullback%)을 계산한다.
-    조건 미달이면 None. 전체 기간 모양 비교로는 안 잡히는 짧은 며칠짜리 등락을
-    따로 본다(2026-09-04 실제 급등주 TPC로보틱스/E8 사례로 확인)."""
+    저점보다는 높은 채로 마감"인 종목의 (PriorRise%, Pullback%, Stage)를 계산한다.
+    조건 미달이거나 마지막 날 캔들의 꼬리가 몸통 대비 너무 길면 None. 전체 기간
+    모양 비교로는 안 잡히는 짧은 며칠짜리 등락을 따로 본다(2026-09-04 실제
+    급등주 TPC로보틱스/E8 사례로 확인).
+
+    Stage: 눌림목 고점 이후 최저 종가가 오늘이면 'bottom'(아직 반등 시작 전,
+    "저점매수" 대기 상태), 아니면(이미 그 저점에서 반등 중) 'rebound'.
+    """
     if len(group) < lookback_days + 5:
         return None
     if group['Marcap'].iloc[-1] < min_marcap:
         return None
     if group['Amount'].tail(20).mean() < min_amount:
+        return None
+    if _long_wick_candle(group.iloc[-1], max_wick_to_body=max_wick_to_body):
         return None
     closes = group['Close'].values[-lookback_days:]
     peak_idx = int(np.argmax(closes))
@@ -477,13 +506,16 @@ def _recent_pullback_metrics(
     pullback = (peak_val - current) / peak_val * 100
     if pullback < min_pullback or pullback > max_pullback:
         return None
-    return prior_rise, pullback
+    post_peak = closes[peak_idx + 1:]
+    stage = 'bottom' if int(np.argmin(post_peak)) == len(post_peak) - 1 else 'rebound'
+    return prior_rise, pullback, stage
 
 
 def find_recent_pullback_stocks(price_df, top_n=None, min_marcap=None, min_amount=None):
-    """최근 며칠간 짧게 오른 뒤 살짝 눌리고 있는(=재상승 대기 중일 수 있는) 종목을 찾는다."""
-    if top_n is None:
-        top_n = RECENT_PULLBACK_TOP_N
+    """최근 며칠간 짧게 오른 뒤 살짝 눌리고 있는(=재상승 대기 중일 수 있는) 종목을 찾는다.
+
+    top_n=None이면 자르지 않고 전부 반환한다(find_presurge_pattern_stocks가
+    Stage별로 나눠서 각각 top_n을 적용하기 위함)."""
     if min_marcap is None:
         min_marcap = SURGE_MIN_MARCAP
     if min_amount is None:
@@ -494,17 +526,18 @@ def find_recent_pullback_stocks(price_df, top_n=None, min_marcap=None, min_amoun
         metrics = _recent_pullback_metrics(group, min_marcap=min_marcap, min_amount=min_amount)
         if metrics is None:
             continue
-        prior_rise, pullback = metrics
+        prior_rise, pullback, stage = metrics
         last_row = group.iloc[-1]
         rows.append({
             'Code': code, 'Name': last_row['Name'], 'Close': last_row['Close'],
-            'Marcap': last_row['Marcap'], 'PriorRise': prior_rise, 'Pullback': pullback,
+            'Marcap': last_row['Marcap'], 'PriorRise': prior_rise, 'Pullback': pullback, 'Stage': stage,
         })
-    columns = ['Code', 'Name', 'Close', 'Marcap', 'PriorRise', 'Pullback']
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'PriorRise', 'Pullback', 'Stage']
     result = pd.DataFrame(rows, columns=columns)
     if result.empty:
         return result
-    return result.sort_values('Pullback', ascending=True).head(top_n).reset_index(drop=True)
+    result = result.sort_values('Pullback', ascending=True).reset_index(drop=True)
+    return result.head(top_n) if top_n is not None else result
 
 
 def _sustained_volume_metrics(group):
@@ -588,7 +621,8 @@ def _combine_with_source_tag(frames_with_labels, price_df):
 
 
 def find_presurge_pattern_stocks(price_df, top_n=100):
-    """횡보 후 급등형 + 바닥 찍고 연속 반등형 + 최근 눌림목 후 재상승형 + 급등 후
+    """횡보 후 급등형 + 바닥 찍고 연속 반등형 + 눌림목형(저점 대기)/눌림목 반등형
+    (최근 눌림목 후 재상승형을 저점 대기/이미 반등 시작 두 상태로 나눈 것) + 급등 후
     눌림목형을 합쳐서 보여준다("급등 전조 패턴형" — 아직 상한가가 확정되지 않은,
     모양만으로 추정하는 후보들). ④/⑧은 시가총액/거래대금 하한을 SURGE_MIN_MARCAP/
     SURGE_MIN_RECENT_AMOUNT로 낮춰서 호출한다."""
@@ -600,12 +634,18 @@ def find_presurge_pattern_stocks(price_df, top_n=100):
     r_bottom = find_bottom_rebound_stocks(
         price_df, top_n=top_n, min_marcap=SURGE_MIN_MARCAP, min_amount=SURGE_MIN_RECENT_AMOUNT,
     )
-    r_recent = find_recent_pullback_stocks(price_df, top_n=top_n)
+    r_recent = find_recent_pullback_stocks(price_df, top_n=None)
+    if r_recent.empty:
+        r_recent_bottom = r_recent_rebound = r_recent
+    else:
+        r_recent_bottom = r_recent[r_recent['Stage'] == 'bottom'].head(top_n)
+        r_recent_rebound = r_recent[r_recent['Stage'] == 'rebound'].head(top_n)
     labels = PATTERN_DEFINITIONS
     return _combine_with_source_tag([
         (r_sideways, labels[BREAKOUT_PATTERN_KEY]['label']),
         (r_bottom, labels[BOTTOM_REBOUND_PATTERN_KEY]['label']),
-        (r_recent, labels[RECENT_PULLBACK_PATTERN_KEY]['label']),
+        (r_recent_bottom, labels[RECENT_PULLBACK_BOTTOM_KEY]['label']),
+        (r_recent_rebound, labels[RECENT_PULLBACK_REBOUND_KEY]['label']),
         (r_rally, labels[RALLY_PULLBACK_PATTERN_KEY]['label']),
     ], price_df)
 
@@ -756,25 +796,30 @@ else:
     elif result_key == PRESURGE_PATTERN_KEY:
         show_cols += ['MatchedPattern', 'Risk']
         st.caption(
-            '⑤ 급등 전조 패턴형은 네 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·최근 '
-            '눌림목 후 재상승형·급등 후 눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 유형" 칼럼에서 '
-            '어떤 조건에 걸렸는지 확인할 수 있고, 한 종목이 여러 조건에 동시에 해당하면 그중 하나만 '
-            '표시됩니다. "최근 눌림목 후 재상승형"은 조회 기간 전체가 아니라 최근 6거래일만 보고 '
-            '"짧게 오르고-살짝 눌리고-아직 저점보다는 높게 마감"인 종목을 찾습니다. 이 메뉴는 시총 '
-            '상위 3000위·50억원 이상까지 넓게 보고(다른 메뉴보다 훨씬 완화됨), 관리종목·투자주의환기 '
-            '종목 같은 KRX 위험 지정 종목도 "위험 표시(KRX)" 칼럼에 ⚠️로 표시한 채 포함합니다.'
+            '⑤ 급등 전조 패턴형은 다섯 가지 하위 조건(횡보 후 급등형·바닥 찍고 연속 반등형·눌림목형'
+            '(저점 대기)·눌림목 반등형(살짝 반등)·급등 후 눌림목형)을 합쳐서 보여줍니다. "매칭된 세부 '
+            '유형" 칼럼에서 어떤 조건에 걸렸는지 확인할 수 있고, 한 종목이 여러 조건에 동시에 '
+            '해당하면 그중 하나만 표시됩니다.  \n'
+            '"눌림목형"/"눌림목 반등형"은 조회 기간 전체가 아니라 최근 6거래일만 보고 "짧게 오르고-'
+            '살짝 눌리고-아직 저점보다는 높게 마감"인 종목을 찾습니다. 둘의 차이는 "저점매수" '
+            '타이밍입니다 — **눌림목형**은 오늘 종가가 눌림목 저점 그 자체라 아직 반등이 시작되지 '
+            '않은 상태(내일 저점매수 후보), **눌림목 반등형**은 이미 그 저점에서 살짝 올라온(반등이 '
+            '시작된) 상태입니다. 마지막 날 캔들의 위꼬리/아래꼬리 중 긴 쪽이 몸통의 2배를 넘으면 '
+            '(방향성이 불분명한 도지형 등) 두 유형 모두에서 제외합니다.  \n'
+            '이 메뉴는 시총 상위 3000위·50억원 이상까지 넓게 보고(다른 메뉴보다 훨씬 완화됨), '
+            '관리종목·투자주의환기종목 같은 KRX 위험 지정 종목도 "위험 표시(KRX)" 칼럼에 ⚠️로 '
+            '표시한 채 포함합니다.'
         )
         st.warning(
-            '⚠️ 네 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
+            '⚠️ 다섯 조건 모두 2026년 데이터 워크포워드 백테스트로 검증했지만 결과가 엇갈립니다. '
             '**횡보 후 급등형**은 다음날 상한가 확률이 0.6%로 사실상 예측 불가능했고, 한 달 내로 '
             '넓히면 약 10%(무작위 5.2%)였습니다. **바닥 찍고 연속 반등형**은 다음날~한 달 내 상한가 '
             '확률이 23.1%로 무작위(2.7%) 대비 높았지만, 정작 매수 후 1개월 보유 수익률은 -17.0%로 '
-            '무작위(-8.2%)보다 나빴습니다. **최근 눌림목 후 재상승형**은 다음날 재상한가 확률이 '
-            '1.14%(무작위 0.47%, 약 2.4배), 5거래일 내로 넓히면 4.6%(무작위 1.7%, 약 2.8배)로 약한 '
-            '수준이지만 꾸준한 신호가 확인됐습니다(2026년 4~9월, 105개 검증일 기준). **급등 후 '
-            '눌림목형**은 1개월 보유 수익률이 -13.2%로 무작위(-15.7%)보다 근소하게 나은 수준에 '
-            '그쳤습니다. 넷 다 상한가를 보장하지 않으며 특히 "매수 후 장기 보유"에는 적합하지 '
-            '않으니 참고용으로만 활용하세요.'
+            '무작위(-8.2%)보다 나빴습니다. **눌림목형/눌림목 반등형**(꼬리 필터 적용 후)은 다음날 '
+            '재상한가 확률이 각각 1.21%/1.09%(무작위 0.55%/0.62%, 약 2.2~1.8배)로 약하지만 꾸준한 '
+            '신호가 확인됐습니다(2026년 4~9월, 105개 검증일 기준). **급등 후 눌림목형**은 1개월 보유 '
+            '수익률이 -13.2%로 무작위(-15.7%)보다 근소하게 나은 수준에 그쳤습니다. 다섯 다 상한가를 '
+            '보장하지 않으며 특히 "매수 후 장기 보유"에는 적합하지 않으니 참고용으로만 활용하세요.'
         )
     elif result_key == LIMITUP_CONTINUATION_KEY:
         show_cols += ['MatchedPattern', 'Risk']

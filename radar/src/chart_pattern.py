@@ -90,8 +90,17 @@ PATTERN_DEFINITIONS = {
     # 2026-04~09 상한가 데이터로 워크포워드 검증: 다음날 재상한가 확률 1.14%(무작위
     # 0.47%, 약 2.4배), 5거래일 내 4.6%(무작위 1.7%, 약 2.8배) — find_recent_pullback_stocks가
     # 처리한다.
-    'recent_pullback': {
-        'label': {'ko': '최근 눌림목 후 재상승형', 'en': 'Recent Pullback then Continuation'},
+    #
+    # "저점매수"용으로는 이 안에서도 두 상태를 구분해야 한다는 요청으로 둘로
+    # 나눴다: 눌림목 저점이 아직 오늘(=아직 반등 시작 전, 내일 매수 후보)인 경우와
+    # 눌림목 형성 후 이미 반등이 시작(오늘 종가가 그 저점보다 높음, 이미 살짝
+    # 뜬 상태)된 경우. 둘 다 종가/거래량 기준 조건은 같고 상태(Stage)만 다르다.
+    'recent_pullback_bottom': {
+        'label': {'ko': '눌림목형(저점 대기)', 'en': 'Pullback (at the low)'},
+        'shape': None,
+    },
+    'recent_pullback_rebound': {
+        'label': {'ko': '눌림목 반등형(살짝 반등)', 'en': 'Pullback Rebound (slight bounce)'},
         'shape': None,
     },
     # 아래 2개는 사용자가 "종류가 너무 많다"고 해서, 위 6개(sideways_breakout/
@@ -131,12 +140,17 @@ SURGE_MIN_MARCAP = 5_000_000_000     # 시총 50억원 미만만 제외 (④/⑧
 SURGE_MIN_RECENT_AMOUNT = 100_000_000  # 최근 거래대금 1억원 미만만 제외 (④/⑧ 기본 10억원보다 낮춤)
 RISK_DEPT_KEYWORDS = ['관리종목', '투자주의환기종목', '투자경고종목', '투자위험종목', '거래정지']
 
-RECENT_PULLBACK_PATTERN_KEY = 'recent_pullback'
+RECENT_PULLBACK_BOTTOM_KEY = 'recent_pullback_bottom'
+RECENT_PULLBACK_REBOUND_KEY = 'recent_pullback_rebound'
 RECENT_PULLBACK_LOOKBACK_DAYS = 6     # 최근 6거래일(약 1주일)만 본다 — 전체 기간 모양과는 별개
 RECENT_PULLBACK_MIN_PRIOR_RISE = 13.0  # 눌림목 직전 고점까지 최소 13% 이상 올랐어야 함
 RECENT_PULLBACK_MIN_PULLBACK = 3.0    # 고점 대비 최소 3% 이상은 눌려야 함(그래야 "눌림목")
 RECENT_PULLBACK_MAX_PULLBACK = 40.0   # 40% 넘게 눌리면 눌림목이 아니라 그냥 반락으로 봄
 RECENT_PULLBACK_TOP_N = 100
+# "봉 길이(몸통)에 비해 꼬리가 너무 긴" 종목은 저점매수 후보에서 제외해달라는
+# 요청 — 매수 판단의 기준이 되는 마지막 날(오늘) 캔들의 위꼬리/아래꼬리 중 긴
+# 쪽이 몸통의 2배를 넘으면 방향성이 불분명한 캔들(도지형 등)로 보고 제외한다.
+RECENT_PULLBACK_MAX_WICK_TO_BODY = 2.0
 
 HALT_PATTERN_KEY = 'trading_halt'
 RALLY_PULLBACK_PATTERN_KEY = 'rally_pullback'
@@ -574,24 +588,51 @@ def find_bottom_rebound_stocks(price_df, top_n=None, min_marcap=None, min_amount
     )
 
 
+def _long_wick_candle(last_row, max_wick_to_body=RECENT_PULLBACK_MAX_WICK_TO_BODY):
+    """마지막 날 캔들(Open/High/Low/Close)의 위꼬리/아래꼬리 중 긴 쪽이 몸통 대비
+    너무 길면(방향성이 불분명한 도지형 등) True를 반환한다.
+
+    몸통이 0(시가=종가)인데 고가-저가 변동도 있었으면 "몸통 없이 꼬리만 있는"
+    캔들이라 True(제외 대상)로 본다. 아예 변동이 없었다면(고가=저가=시가=종가)
+    캔들 모양으로 판단할 정보가 없으므로 False(제외하지 않음)로 둔다.
+    """
+    o, h, l, c = last_row['Open'], last_row['High'], last_row['Low'], last_row['Close']
+    if pd.isna(o) or pd.isna(h) or pd.isna(l) or pd.isna(c):
+        return False
+    body = abs(c - o)
+    upper_wick = h - max(o, c)
+    lower_wick = min(o, c) - l
+    max_wick = max(upper_wick, lower_wick, 0.0)
+    if body <= 0:
+        return max_wick > 0
+    return (max_wick / body) > max_wick_to_body
+
+
 def _recent_pullback_metrics(
     group, lookback_days=RECENT_PULLBACK_LOOKBACK_DAYS,
     min_prior_rise=RECENT_PULLBACK_MIN_PRIOR_RISE, min_pullback=RECENT_PULLBACK_MIN_PULLBACK,
     max_pullback=RECENT_PULLBACK_MAX_PULLBACK, min_marcap=SURGE_MIN_MARCAP, min_amount=SURGE_MIN_RECENT_AMOUNT,
+    max_wick_to_body=RECENT_PULLBACK_MAX_WICK_TO_BODY,
 ):
     """최근 lookback_days(기본 6거래일) 안에서 "짧게 오르고 - 살짝 눌리고 - 아직
-    저점보다는 높은 채로 마감"인 종목의 (PriorRise%, Pullback%)을 계산한다.
-    조건 미달이면 None.
+    저점보다는 높은 채로 마감"인 종목의 (PriorRise%, Pullback%, Stage)를 계산한다.
+    조건 미달이거나 마지막 날 캔들의 꼬리가 몸통 대비 너무 길면 None.
 
     sideways_breakout/bottom_rebound 등 기존 모양 비교는 조회 기간 전체
     (1~수개월)를 20개 점으로 리샘플링해서 보기 때문에 이런 짧은 며칠짜리
     등락은 뭉개져서 안 잡힌다 — 그래서 최근 며칠만 별도로 본다.
+
+    Stage: 눌림목 고점 이후 최저 종가가 오늘이면 'bottom'(아직 반등 시작 전,
+    "저점매수" 대기 상태), 오늘보다 더 낮은 날이 있었으면(=이미 그 저점에서
+    반등 중) 'rebound'.
     """
     if len(group) < lookback_days + 5:
         return None
     if group['Marcap'].iloc[-1] < min_marcap:
         return None
     if group['Amount'].tail(20).mean() < min_amount:
+        return None
+    if _long_wick_candle(group.iloc[-1], max_wick_to_body=max_wick_to_body):
         return None
     closes = group['Close'].values[-lookback_days:]
     peak_idx = int(np.argmax(closes))
@@ -611,7 +652,9 @@ def _recent_pullback_metrics(
     pullback = (peak_val - current) / peak_val * 100
     if pullback < min_pullback or pullback > max_pullback:
         return None
-    return prior_rise, pullback
+    post_peak = closes[peak_idx + 1:]
+    stage = 'bottom' if int(np.argmin(post_peak)) == len(post_peak) - 1 else 'rebound'
+    return prior_rise, pullback, stage
 
 
 def find_recent_pullback_stocks(price_df, top_n=None, min_marcap=None, min_amount=None):
@@ -620,11 +663,11 @@ def find_recent_pullback_stocks(price_df, top_n=None, min_marcap=None, min_amoun
     :param min_marcap: None이면 SURGE_MIN_MARCAP을 쓴다(이 패턴은 애초에 ⑤ 급등
         전조 패턴형 전용으로 만들어져 기본값부터 완화된 기준을 쓴다).
     :param min_amount: None이면 SURGE_MIN_RECENT_AMOUNT를 쓴다.
-    :return: DataFrame [Code, Name, Close, Marcap, PriorRise, Pullback]
+    :param top_n: None이면 자르지 않고 전부 반환한다(find_presurge_pattern_stocks가
+        Stage별로 나눠서 각각 top_n을 적용하기 위함).
+    :return: DataFrame [Code, Name, Close, Marcap, PriorRise, Pullback, Stage]
         (Pullback 오름차순 — 눌림폭이 얕을수록/타이트할수록 먼저 나옴)
     """
-    if top_n is None:
-        top_n = RECENT_PULLBACK_TOP_N
     if min_marcap is None:
         min_marcap = SURGE_MIN_MARCAP
     if min_amount is None:
@@ -635,7 +678,7 @@ def find_recent_pullback_stocks(price_df, top_n=None, min_marcap=None, min_amoun
         metrics = _recent_pullback_metrics(group, min_marcap=min_marcap, min_amount=min_amount)
         if metrics is None:
             continue
-        prior_rise, pullback = metrics
+        prior_rise, pullback, stage = metrics
         last_row = group.iloc[-1]
         rows.append({
             'Code': code,
@@ -644,16 +687,14 @@ def find_recent_pullback_stocks(price_df, top_n=None, min_marcap=None, min_amoun
             'Marcap': last_row['Marcap'],
             'PriorRise': prior_rise,
             'Pullback': pullback,
+            'Stage': stage,
         })
-    columns = ['Code', 'Name', 'Close', 'Marcap', 'PriorRise', 'Pullback']
+    columns = ['Code', 'Name', 'Close', 'Marcap', 'PriorRise', 'Pullback', 'Stage']
     result = pd.DataFrame(rows, columns=columns)
     if result.empty:
         return result
-    return (
-        result.sort_values('Pullback', ascending=True)
-        .head(top_n)
-        .reset_index(drop=True)
-    )
+    result = result.sort_values('Pullback', ascending=True).reset_index(drop=True)
+    return result.head(top_n) if top_n is not None else result
 
 
 def _sustained_volume_metrics(group):
@@ -762,15 +803,16 @@ def _combine_with_source_tag(frames_with_labels, price_df):
 
 
 def find_presurge_pattern_stocks(price_df, top_n=100):
-    """④횡보후급등형 + ⑥급등후눌림목형 + ⑧바닥찍고연속반등형 + 최근 눌림목 후
-    재상승형을 합쳐서 보여준다("급등 전조 패턴형" — 아직 상한가가 확정되지 않은,
-    모양만으로 추정하는 후보들).
+    """④횡보후급등형 + ⑧바닥찍고연속반등형 + 눌림목형/눌림목 반등형(최근 눌림목 후
+    재상승형을 저점 대기/이미 반등 시작 두 상태로 나눈 것) + ⑥급등후눌림목형을
+    합쳐서 보여준다("급등 전조 패턴형" — 아직 상한가가 확정되지 않은, 모양만으로
+    추정하는 후보들).
 
     ④/⑧은 시가총액/거래대금 하한을 SURGE_MIN_MARCAP/SURGE_MIN_RECENT_AMOUNT로
     낮춰서 호출한다 — 기본 300억원/10억원 기준으로는 실제 급등주(2026-09-04
     E8 시총 87억, KS인더스트리 83억)가 걸러져버리는 게 확인됐기 때문. 최근 눌림목
     후 재상승형(find_recent_pullback_stocks)은 애초에 이 완화된 기준을 기본값으로
-    쓴다.
+    쓰고, 마지막 날 캔들의 꼬리가 몸통보다 너무 길면 이미 걸러진 상태로 나온다.
     """
     r_sideways = find_matching_stocks(
         price_df, BREAKOUT_PATTERN_KEY, top_n=top_n,
@@ -780,12 +822,18 @@ def find_presurge_pattern_stocks(price_df, top_n=100):
     r_bottom = find_bottom_rebound_stocks(
         price_df, top_n=top_n, min_marcap=SURGE_MIN_MARCAP, min_amount=SURGE_MIN_RECENT_AMOUNT,
     )
-    r_recent = find_recent_pullback_stocks(price_df, top_n=top_n)
+    r_recent = find_recent_pullback_stocks(price_df, top_n=None)
+    if r_recent.empty:
+        r_recent_bottom = r_recent_rebound = r_recent
+    else:
+        r_recent_bottom = r_recent[r_recent['Stage'] == 'bottom'].head(top_n)
+        r_recent_rebound = r_recent[r_recent['Stage'] == 'rebound'].head(top_n)
     labels = PATTERN_DEFINITIONS
     return _combine_with_source_tag([
         (r_sideways, labels[BREAKOUT_PATTERN_KEY]['label']['ko']),
         (r_bottom, labels[BOTTOM_REBOUND_PATTERN_KEY]['label']['ko']),
-        (r_recent, labels[RECENT_PULLBACK_PATTERN_KEY]['label']['ko']),
+        (r_recent_bottom, labels[RECENT_PULLBACK_BOTTOM_KEY]['label']['ko']),
+        (r_recent_rebound, labels[RECENT_PULLBACK_REBOUND_KEY]['label']['ko']),
         (r_rally, labels[RALLY_PULLBACK_PATTERN_KEY]['label']['ko']),
     ], price_df)
 
