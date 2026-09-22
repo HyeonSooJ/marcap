@@ -228,6 +228,13 @@ NYSE 상장)가 이에 해당합니다.
 | AMATUSDT | 어플라이드머티어리얼즈(Applied Materials, 반도체장비) | 미확인 |
 | APPUSDT | 애플로빈(AppLovin) | 미확인 |
 | ASTSUSDT | AST 스페이스모바일(AST SpaceMobile, 위성통신) | 미확인 |
+| PATHUSDT | 유아이패스(UiPath) | 20배 |
+| AMCUSDT | AMC 엔터테인먼트(영화관 체인) | 20배 |
+| CYPHUSDT | 사이퍼펑크 테크놀로지스(Cypherpunk Technologies) | 20배 |
+| ANETUSDT | 아리스타 네트웍스(Arista Networks) | 20배 |
+| HUTUSDT | 헛8(Hut 8, 비트코인 채굴·AI데이터센터) | 20배 |
+| APLDUSDT | 어플라이드 디지털(Applied Digital) | 20배 |
+| AGPUUSDT | 액스 컴퓨트(Axe Compute) | 20배 |
 
 **주의**: `PAXGUSDT`("PAX Gold")는 XAUUSDT(금 선물)와 다른 **크립토
 토큰**입니다. 금 1온스를 담보로 발행된 스테이블코인형 토큰이라, XAUT와
@@ -337,17 +344,39 @@ NYSE 상장)가 이에 해당합니다.
 | XAGUSDT | 은(Silver) | 2026-01-07 | 최대 50배 |
 | XPTUSDT | 백금(Platinum) | 2026-01-30 | 최대 100배 |
 | XPDUSDT | 팔라듐(Palladium) | 2026-01-30 | 최대 100배 |
-| NATGASUSDT | 천연가스(Natural Gas) | 미확인 | 미확인 |
-| BZUSDT | 브렌트유(Brent Oil) | 미확인 | 미확인 |
-| CLUSDT | WTI 원유(WTI Crude Oil) | 미확인 | 미확인 |
+| NATGASUSDT | 천연가스(Natural Gas) | 2026-04-01 | 최대 100배 |
+| BZUSDT | 브렌트유(Brent Oil) | 2026-04-01 | 최대 100배 |
+| CLUSDT | WTI 원유(WTI Crude Oil) | 2026-04-01 | 최대 100배 |
 | COPPERUSDT | 구리(Copper) | 미확인 | 미확인 |
 
-이 넷이 TradFi 무기한 선물 카테고리의 최초 상품군이며, 국가·기업 테마는
-아니지만 같은 상품군이라 참고로 기재.
+금/은/백금/팔라듐이 TradFi 무기한 선물 카테고리의 최초 상품군이며,
+국가·기업 테마는 아니지만 같은 상품군이라 참고로 기재.
 
 **주의**: `XAUTUSDT`(밑에 "Tether Gold"로 표시)는 별개의 **크립토 토큰**
 입니다. 테더가 발행한 금 1온스 담보 스테이블코인형 토큰이지, 바이낸스의
 TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
+
+**업데이트(2026-09-16)**: 원자재(commodity)류 TradFi 계약은 기존
+"24시간 연중무휴"에서 **"24/5"**(주 5일, 일반 원자재 시장처럼 주말
+휴장)로 거래 방식이 변경되었습니다. 매일 있던 유지보수 브레이크 타임은
+사라졌지만, 이 문서의 다른 곳에 적힌 "24시간 거래"는 원자재류에 한해
+더 이상 정확하지 않습니다 — 원자재는 **평일 24시간 + 주말 휴장**으로
+이해하시면 됩니다. 주식·ETF·FX 등 다른 카테고리는 여전히 24시간
+연중무휴입니다.
+
+### 💱 외환(FX) 무기한 선물 — 신규 카테고리(2026-09-18 도입)
+
+바이낸스가 TradFi 상품군에 **외환(FX) 무기한 선물**을 새로 추가했습니다.
+주식·ETF·원자재에 이어 네 번째 자산군입니다.
+
+| 티커 | 기초자산 | 상장일 | 최대 레버리지 | 거래시간 |
+|---|---|---|---|---|
+| USDBRLUSDT | 미국 달러/브라질 헤알(USD/BRL) 환율 | 2026-09-21 14:00 UTC | 최대 100배 | 24시간 연중무휴 |
+
+첫 상품은 미국 달러-브라질 헤알(USD/BRL)이며, 바이낸스가 "9.6조 달러
+규모의 외환시장에 24/7 접근"을 내세우며 시작한 카테고리라 앞으로
+USD/JPY, EUR/USD 같은 주요 통화쌍도 추가될 가능성이 높습니다. 국가
+"주식"이 아니라 "환율"을 추종하는 완전히 다른 상품이니 참고하세요.
 
 ### ⚽ 참고: 팬토큰(별개 상품군)
 
@@ -424,4 +453,15 @@ TradFi 금 선물(XAUUSDT)과는 다른 상품이니 혼동하지 마세요.
    표시한 항목은 이번 조사에서 확실한 근거를 찾지 못한 것입니다. 실제
    거래 전 바이낸스 앱/공식 공지("Margined TradFi Perpetual Contracts"
    시리즈)에서 최신 수치를 반드시 재확인하세요.
+4. **새 상장을 직접 확인하고 싶다면**:
+   - 바이낸스 공식 공지 페이지 → https://www.binance.com/en/support/announcement/list/161
+     (Futures 카테고리) 에서 "Margined TradFi Perpetual Contracts (날짜)"
+     제목으로 검색하면 배치별 공지를 볼 수 있습니다.
+   - 앱에서는 Futures → 상단 필터에서 **New**(신규) 탭을 누르면 최근
+     상장된 것부터 정렬해서 바로 볼 수 있습니다(스크린샷 없이도 앱에서
+     바로 확인 가능).
+   - PANews, Phemex News, CoinGabbar, The Block, CryptoBriefing 같은
+     크립토 뉴스 매체들이 바이낸스의 배치 공지를 거의 실시간으로
+     받아쓰기 때문에, "Binance TradFi perpetual [월] 2026" 식으로
+     검색해도 새 종목을 놓치지 않고 따라갈 수 있습니다.
 4. 이 문서는 정보 정리 목적이며 투자 조언이 아닙니다.
