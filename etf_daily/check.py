@@ -20,6 +20,16 @@ from pykrx import stock
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(THIS_DIR, "data")
 HISTORY_DIR = os.path.join(DATA_DIR, "history")
+ELIGIBLE_PATH = os.path.join(THIS_DIR, "eligible_etfs.json")
+
+
+def load_eligible_names():
+    """제3회 ETF투자왕 대회 투자 가능 종목명 목록 (없으면 필터링 없이 전체 사용)."""
+    if not os.path.exists(ELIGIBLE_PATH):
+        return None
+    with open(ELIGIBLE_PATH, encoding="utf-8") as f:
+        data = json.load(f)
+    return set(data.get("all_names", []))
 
 
 def prev_business_day(date_str, tries=10):
@@ -46,10 +56,13 @@ def build_report(target):
         prev_df[[close_col]], lsuffix="_today", rsuffix="_prev", how="inner"
     )
     merged = merged[merged[f"{close_col}_prev"] > 0]
+    merged = merged.dropna(subset=[f"{close_col}_today", f"{close_col}_prev"])
     merged["등락률"] = (
         (merged[f"{close_col}_today"] - merged[f"{close_col}_prev"])
         / merged[f"{close_col}_prev"] * 100
     ).round(2)
+
+    eligible = load_eligible_names()
 
     rows = []
     for ticker, r in merged.iterrows():
@@ -59,13 +72,19 @@ def build_report(target):
             name = ticker
         if not isinstance(name, str) or not name.strip():
             continue
-        rows.append({
-            "name": name.strip(),
-            "ticker": ticker,
-            "pct": float(r["등락률"]),
-            "close_today": int(r[f"{close_col}_today"]),
-            "close_prev": int(r[f"{close_col}_prev"]),
-        })
+        name = name.strip()
+        if eligible is not None and name not in eligible:
+            continue
+        try:
+            rows.append({
+                "name": name,
+                "ticker": ticker,
+                "pct": float(r["등락률"]),
+                "close_today": int(r[f"{close_col}_today"]),
+                "close_prev": int(r[f"{close_col}_prev"]),
+            })
+        except (TypeError, ValueError):
+            continue
 
     rows.sort(key=lambda x: x["pct"], reverse=True)
 
