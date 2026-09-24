@@ -21,15 +21,20 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(THIS_DIR, "data")
 HISTORY_DIR = os.path.join(DATA_DIR, "history")
 ELIGIBLE_PATH = os.path.join(THIS_DIR, "eligible_etfs.json")
+DIVISIONS = ["국내주식형", "연금형", "글로벌형", "자율투자형"]
+TOP_N = 30
 
 
-def load_eligible_names():
-    """제3회 ETF투자왕 대회 투자 가능 종목명 목록 (없으면 필터링 없이 전체 사용)."""
+def load_division_lists():
+    """부문별 종목명 목록(dict[부문] = set(종목명))을 반환. 파일이 없으면 None(필터링 안 함)."""
     if not os.path.exists(ELIGIBLE_PATH):
         return None
     with open(ELIGIBLE_PATH, encoding="utf-8") as f:
         data = json.load(f)
-    return set(data.get("all_names", []))
+    divisions = data.get("divisions")
+    if not divisions:
+        return None
+    return {d: set(names) for d, names in divisions.items()}
 
 
 def prev_business_day(date_str, tries=10):
@@ -58,7 +63,8 @@ def build_report(target):
     merged = merged[merged[f"{close_col}_prev"] > 0]
     merged = merged.dropna(subset=[f"{close_col}_today", f"{close_col}_prev"])
 
-    eligible = load_eligible_names()
+    div_lists = load_division_lists()
+    all_eligible = set().union(*div_lists.values()) if div_lists else None
     SANITY_LIMIT = 100.0  # ETF 하루 등락률이 이 값을 넘으면 데이터 이상으로 간주
 
     rows = []
@@ -71,7 +77,7 @@ def build_report(target):
         if not isinstance(name, str) or not name.strip():
             continue
         name = name.strip()
-        if eligible is not None and name not in eligible:
+        if all_eligible is not None and name not in all_eligible:
             continue
         try:
             close_today = int(r[f"{close_col}_today"])
@@ -85,12 +91,14 @@ def build_report(target):
         if abs(pct) > SANITY_LIMIT:
             flagged.append((name, ticker, pct, close_today, close_prev))
             continue
+        divisions = [d for d in DIVISIONS if div_lists and name in div_lists.get(d, ())] if div_lists else []
         rows.append({
             "name": name,
             "ticker": ticker,
             "pct": pct,
             "close_today": close_today,
             "close_prev": close_prev,
+            "divisions": divisions,
         })
 
     rows.sort(key=lambda x: x["pct"], reverse=True)
@@ -100,12 +108,24 @@ def build_report(target):
         for name, ticker, pct, close_today, close_prev in flagged[:10]:
             print(f"   {name}({ticker}): {pct}%  (당일 {close_today} / 전일 {close_prev})")
 
+    def top_n(entries, reverse):
+        s = sorted(entries, key=lambda x: x["pct"], reverse=reverse)[:TOP_N]
+        return [{"name": e["name"], "ticker": e["ticker"], "pct": e["pct"]} for e in s]
+
+    by_division = {
+        "전체": {"up": top_n(rows, True), "down": top_n(rows, False)},
+    }
+    for d in DIVISIONS:
+        d_rows = [r for r in rows if d in r["divisions"]]
+        by_division[d] = {"up": top_n(d_rows, True), "down": top_n(d_rows, False)}
+
     return {
         "date": f"{target[0:4]}-{target[4:6]}-{target[6:8]}",
         "prev_date": f"{prev[0:4]}-{prev[4:6]}-{prev[6:8]}",
         "generated_at": datetime.utcnow().isoformat() + "Z",
         "count": len(rows),
         "rows": rows,
+        "by_division": by_division,
     }
 
 
