@@ -57,14 +57,12 @@ def build_report(target):
     )
     merged = merged[merged[f"{close_col}_prev"] > 0]
     merged = merged.dropna(subset=[f"{close_col}_today", f"{close_col}_prev"])
-    merged["등락률"] = (
-        (merged[f"{close_col}_today"] - merged[f"{close_col}_prev"])
-        / merged[f"{close_col}_prev"] * 100
-    ).round(2)
 
     eligible = load_eligible_names()
+    SANITY_LIMIT = 100.0  # ETF 하루 등락률이 이 값을 넘으면 데이터 이상으로 간주
 
     rows = []
+    flagged = []
     for ticker, r in merged.iterrows():
         try:
             name = stock.get_etf_ticker_name(ticker)
@@ -76,17 +74,31 @@ def build_report(target):
         if eligible is not None and name not in eligible:
             continue
         try:
-            rows.append({
-                "name": name,
-                "ticker": ticker,
-                "pct": float(r["등락률"]),
-                "close_today": int(r[f"{close_col}_today"]),
-                "close_prev": int(r[f"{close_col}_prev"]),
-            })
+            close_today = int(r[f"{close_col}_today"])
+            close_prev = int(r[f"{close_col}_prev"])
         except (TypeError, ValueError):
             continue
+        if close_prev <= 0:
+            continue
+        # 실제로 저장/표시되는 종가 값으로 등락률을 다시 계산해서 표시값과 항상 일치시킨다.
+        pct = round((close_today - close_prev) / close_prev * 100, 2)
+        if abs(pct) > SANITY_LIMIT:
+            flagged.append((name, ticker, pct, close_today, close_prev))
+            continue
+        rows.append({
+            "name": name,
+            "ticker": ticker,
+            "pct": pct,
+            "close_today": close_today,
+            "close_prev": close_prev,
+        })
 
     rows.sort(key=lambda x: x["pct"], reverse=True)
+
+    if flagged:
+        print(f"(경고) 등락률이 ±{SANITY_LIMIT}%를 넘어 데이터 이상으로 제외된 종목 {len(flagged)}개:")
+        for name, ticker, pct, close_today, close_prev in flagged[:10]:
+            print(f"   {name}({ticker}): {pct}%  (당일 {close_today} / 전일 {close_prev})")
 
     return {
         "date": f"{target[0:4]}-{target[4:6]}-{target[6:8]}",
