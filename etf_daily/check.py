@@ -129,8 +129,21 @@ def build_report(target):
     }
 
 
+def latest_available_date(tries=10):
+    """KRX ETF 시세는 당일 장 마감 이후에도 한동안 미게시 상태일 수 있어서,
+    데이터가 실제로 있는 가장 최근 날짜를 오늘부터 거슬러 올라가며 찾는다."""
+    d = datetime.today()
+    for _ in range(tries):
+        ds = d.strftime("%Y%m%d")
+        df = stock.get_etf_ohlcv_by_ticker(ds)
+        if df is not None and not df.empty:
+            return ds
+        d -= timedelta(days=1)
+    raise RuntimeError("최근 거래일 데이터를 못 찾았습니다.")
+
+
 def main():
-    target = sys.argv[1] if len(sys.argv) > 1 else datetime.today().strftime("%Y%m%d")
+    target = sys.argv[1] if len(sys.argv) > 1 else latest_available_date()
     print(f"기준일: {target}")
 
     report = build_report(target)
