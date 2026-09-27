@@ -118,21 +118,31 @@ def build_report(target):
         except Exception:
             name = ticker
         if not isinstance(name, str) or not name.strip():
+            if ticker in SUPPLEMENTAL_TICKERS:
+                print(f"   [일괄조회 내 제외] {ticker}: 이름 조회 실패 (name={name!r})")
             continue
         name = name.strip()
         if all_eligible is not None and name not in all_eligible:
+            if ticker in SUPPLEMENTAL_TICKERS:
+                print(f"   [일괄조회 내 제외] {ticker}: 대회 명단 불일치 - pykrx 이름={name!r} / 하드코딩 이름={SUPPLEMENTAL_TICKERS[ticker]!r}")
             continue
         try:
             open_today = int(r[open_col])
             close_today = int(r[f"{close_col}_today"])
             close_prev = int(r[f"{close_col}_prev"])
         except (TypeError, ValueError):
+            if ticker in SUPPLEMENTAL_TICKERS:
+                print(f"   [일괄조회 내 제외] {ticker} {name}: 시가/종가 값 변환 실패 - {dict(r)}")
             continue
         if close_prev <= 0:
+            if ticker in SUPPLEMENTAL_TICKERS:
+                print(f"   [일괄조회 내 제외] {ticker} {name}: 전일 종가가 0 이하 ({close_prev})")
             continue
         # 실제로 저장/표시되는 종가 값으로 등락률을 다시 계산해서 표시값과 항상 일치시킨다.
         pct = round((close_today - close_prev) / close_prev * 100, 2)
         if abs(pct) > SANITY_LIMIT:
+            if ticker in SUPPLEMENTAL_TICKERS:
+                print(f"   [일괄조회 내 제외] {ticker} {name}: 등락률 이상치 ({pct}%)")
             flagged.append((name, ticker, pct, close_today, close_prev))
             continue
         intraday_pct = round((close_today - open_today) / open_today * 100, 2) if open_today > 0 else None
@@ -149,7 +159,9 @@ def build_report(target):
         })
 
     # 일괄조회(get_etf_ohlcv_by_ticker)에서 통째로 빠지는 신상품군을 개별조회로 보정한다.
-    existing_tickers = set(merged.index)
+    # (merged.index가 아니라 실제로 rows에 반영된 티커 기준: 시세는 있어도 이름 불일치 등으로
+    #  메인 루프에서 걸러졌을 수 있으므로 그런 경우도 여기서 다시 보정 시도한다.)
+    existing_tickers = {r["ticker"] for r in rows}
     supplemental_added = 0
     print(f"보정 대상 신상품 {len(SUPPLEMENTAL_TICKERS)}개 처리 시작...")
     for ticker, name in SUPPLEMENTAL_TICKERS.items():
