@@ -1,8 +1,8 @@
 {
   "date": "2026-09-23",
   "prev_date": "2026-09-22",
-  "generated_at": "2026-09-27T02:42:33.372380Z",
-  "count": 1033,
+  "generated_at": "2026-09-27T02:46:50.300711Z",
+  "count": 1049,
   "rows": [
     {
       "name": "HANARO 반도체핵심공정주도주",
@@ -43,6 +43,42 @@
       ]
     },
     {
+      "name": "PLUS 삼성전자단일종목레버리지",
+      "ticker": "0193K0",
+      "pct": 5.94,
+      "intraday_pct": 1.63,
+      "open_today": 13785,
+      "close_today": 14010,
+      "close_prev": 13225,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "TIGER 삼성전자단일종목레버리지",
+      "ticker": "0195R0",
+      "pct": 5.75,
+      "intraday_pct": 1.28,
+      "open_today": 12520,
+      "close_today": 12680,
+      "close_prev": 11990,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "KODEX 삼성전자단일종목레버리지",
+      "ticker": "0193W0",
+      "pct": 5.68,
+      "intraday_pct": 0.94,
+      "open_today": 13820,
+      "close_today": 13950,
+      "close_prev": 13200,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
       "name": "SOL 반도체전공정",
       "ticker": "475300",
       "pct": 5.64,
@@ -57,6 +93,42 @@
       ]
     },
     {
+      "name": "RISE 삼성전자단일종목레버리지",
+      "ticker": "0192M0",
+      "pct": 5.49,
+      "intraday_pct": 0.93,
+      "open_today": 12860,
+      "close_today": 12980,
+      "close_prev": 12305,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "1Q 삼성전자선물단일종목레버리지",
+      "ticker": "0198B0",
+      "pct": 5.41,
+      "intraday_pct": 1.45,
+      "open_today": 13060,
+      "close_today": 13250,
+      "close_prev": 12570,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "ACE 삼성전자단일종목레버리지",
+      "ticker": "0194M0",
+      "pct": 5.39,
+      "intraday_pct": 0.91,
+      "open_today": 12700,
+      "close_today": 12815,
+      "close_prev": 12160,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
       "name": "HANARO 미국AI메모리반도체TOP4+",
       "ticker": "0181B0",
       "pct": 5.23,
@@ -67,6 +139,18 @@
       "divisions": [
         "연금형",
         "글로벌형",
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "KIWOOM 삼성전자선물단일종목레버리지",
+      "ticker": "0194N0",
+      "pct": 5.2,
+      "intraday_pct": 0.59,
+      "open_today": 12775,
+      "close_today": 12850,
+      "close_prev": 12215,
+      "divisions": [
         "자율투자형"
       ]
     },
@@ -483,6 +567,18 @@
       ]
     },
     {
+      "name": "KODEX SK하이닉스단일종목레버리지",
+      "ticker": "0193T0",
+      "pct": 2.73,
+      "intraday_pct": -3.38,
+      "open_today": 12280,
+      "close_today": 11865,
+      "close_prev": 11550,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
       "name": "KODEX AI반도체TOP2플러스",
       "ticker": "395160",
       "pct": 2.72,
@@ -549,6 +645,30 @@
       "divisions": [
         "연금형",
         "글로벌형",
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "TIGER SK하이닉스단일종목레버리지",
+      "ticker": "0195S0",
+      "pct": 2.7,
+      "intraday_pct": -3.72,
+      "open_today": 10485,
+      "close_today": 10095,
+      "close_prev": 9830,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "ACE SK하이닉스단일종목레버리지",
+      "ticker": "0194T0",
+      "pct": 2.64,
+      "intraday_pct": -3.49,
+      "open_today": 10470,
+      "close_today": 10105,
+      "close_prev": 9845,
+      "divisions": [
         "자율투자형"
       ]
     },
@@ -663,6 +783,18 @@
       ]
     },
     {
+      "name": "RISE SK하이닉스단일종목레버리지",
+      "ticker": "0192L0",
+      "pct": 2.44,
+      "intraday_pct": -3.66,
+      "open_today": 10665,
+      "close_today": 10275,
+      "close_prev": 10030,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
       "name": "KODEX 미국AI반도체TOP3플러스",
       "ticker": "0151S0",
       "pct": 2.42,
@@ -726,6 +858,18 @@
       "open_today": 221445,
       "close_today": 216880,
       "close_prev": 211985,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "KIWOOM SK하이닉스선물단일종목레버리지",
+      "ticker": "0194R0",
+      "pct": 2.29,
+      "intraday_pct": -4.01,
+      "open_today": 10230,
+      "close_today": 9820,
+      "close_prev": 9600,
       "divisions": [
         "자율투자형"
       ]
@@ -1216,6 +1360,18 @@
       ]
     },
     {
+      "name": "SOL SK하이닉스단일종목레버리지",
+      "ticker": "0197W0",
+      "pct": 1.91,
+      "intraday_pct": -3.75,
+      "open_today": 10275,
+      "close_today": 9890,
+      "close_prev": 9705,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
       "name": "KODEX 글로벌비만치료제TOP2 Plus",
       "ticker": "476070",
       "pct": 1.86,
@@ -1338,6 +1494,18 @@
       "divisions": [
         "국내주식형",
         "연금형",
+        "자율투자형"
+      ]
+    },
+    {
+      "name": "1Q SK하이닉스선물단일종목레버리지",
+      "ticker": "0198D0",
+      "pct": 1.64,
+      "intraday_pct": -4.93,
+      "open_today": 11050,
+      "close_today": 10505,
+      "close_prev": 10335,
+      "divisions": [
         "자율투자형"
       ]
     },
@@ -13777,6 +13945,18 @@
       ]
     },
     {
+      "name": "SOL SK하이닉스선물단일종목인버스2X",
+      "ticker": "0197X0",
+      "pct": -2.51,
+      "intraday_pct": 4.11,
+      "open_today": 5225,
+      "close_today": 5440,
+      "close_prev": 5580,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
       "name": "RISE 미국은행TOP10",
       "ticker": "0013P0",
       "pct": -2.52,
@@ -14097,6 +14277,18 @@
       ]
     },
     {
+      "name": "PLUS 삼성전자선물단일종목인버스2X",
+      "ticker": "0193L0",
+      "pct": -5.76,
+      "intraday_pct": -0.86,
+      "open_today": 7590,
+      "close_today": 7525,
+      "close_prev": 7985,
+      "divisions": [
+        "자율투자형"
+      ]
+    },
+    {
       "name": "TIGER 코리아원자력",
       "ticker": "0091P0",
       "pct": -5.83,
@@ -14133,16 +14325,58 @@
           "intraday_pct": 1.79
         },
         {
+          "name": "PLUS 삼성전자단일종목레버리지",
+          "ticker": "0193K0",
+          "pct": 5.94,
+          "intraday_pct": 1.63
+        },
+        {
+          "name": "TIGER 삼성전자단일종목레버리지",
+          "ticker": "0195R0",
+          "pct": 5.75,
+          "intraday_pct": 1.28
+        },
+        {
+          "name": "KODEX 삼성전자단일종목레버리지",
+          "ticker": "0193W0",
+          "pct": 5.68,
+          "intraday_pct": 0.94
+        },
+        {
           "name": "SOL 반도체전공정",
           "ticker": "475300",
           "pct": 5.64,
           "intraday_pct": 3.55
         },
         {
+          "name": "RISE 삼성전자단일종목레버리지",
+          "ticker": "0192M0",
+          "pct": 5.49,
+          "intraday_pct": 0.93
+        },
+        {
+          "name": "1Q 삼성전자선물단일종목레버리지",
+          "ticker": "0198B0",
+          "pct": 5.41,
+          "intraday_pct": 1.45
+        },
+        {
+          "name": "ACE 삼성전자단일종목레버리지",
+          "ticker": "0194M0",
+          "pct": 5.39,
+          "intraday_pct": 0.91
+        },
+        {
           "name": "HANARO 미국AI메모리반도체TOP4+",
           "ticker": "0181B0",
           "pct": 5.23,
           "intraday_pct": 0.53
+        },
+        {
+          "name": "KIWOOM 삼성전자선물단일종목레버리지",
+          "ticker": "0194N0",
+          "pct": 5.2,
+          "intraday_pct": 0.59
         },
         {
           "name": "TIGER 미국필라델피아반도체레버리지(합성)",
@@ -14251,48 +14485,6 @@
           "ticker": "233740",
           "pct": 3.03,
           "intraday_pct": 0.94
-        },
-        {
-          "name": "PLUS 일본반도체소부장",
-          "ticker": "464920",
-          "pct": 3.01,
-          "intraday_pct": 2.18
-        },
-        {
-          "name": "ACE 레버리지",
-          "ticker": "152500",
-          "pct": 2.98,
-          "intraday_pct": -1.86
-        },
-        {
-          "name": "RISE 코스닥150선물레버리지",
-          "ticker": "278240",
-          "pct": 2.94,
-          "intraday_pct": 0.9
-        },
-        {
-          "name": "ACE 글로벌AI맞춤형반도체",
-          "ticker": "494340",
-          "pct": 2.92,
-          "intraday_pct": 1.44
-        },
-        {
-          "name": "KIWOOM 코스닥150선물레버리지",
-          "ticker": "291630",
-          "pct": 2.91,
-          "intraday_pct": 1.0
-        },
-        {
-          "name": "PLUS 글로벌희토류&전략자원생산기업",
-          "ticker": "415920",
-          "pct": 2.86,
-          "intraday_pct": 2.86
-        },
-        {
-          "name": "HANARO 코스닥150선물레버리지",
-          "ticker": "306530",
-          "pct": 2.85,
-          "intraday_pct": 1.08
         }
       ],
       "down": [
@@ -14301,6 +14493,12 @@
           "ticker": "0091P0",
           "pct": -5.83,
           "intraday_pct": -5.19
+        },
+        {
+          "name": "PLUS 삼성전자선물단일종목인버스2X",
+          "ticker": "0193L0",
+          "pct": -5.76,
+          "intraday_pct": -0.86
         },
         {
           "name": "SOL 한국원자력SMR",
@@ -14447,6 +14645,12 @@
           "intraday_pct": -3.47
         },
         {
+          "name": "SOL SK하이닉스선물단일종목인버스2X",
+          "ticker": "0197X0",
+          "pct": -2.51,
+          "intraday_pct": 4.11
+        },
+        {
           "name": "KIWOOM 미국원유에너지기업",
           "ticker": "474800",
           "pct": -2.48,
@@ -14463,18 +14667,6 @@
           "ticker": "496770",
           "pct": -2.37,
           "intraday_pct": -6.38
-        },
-        {
-          "name": "ACE 포스코그룹포커스",
-          "ticker": "469170",
-          "pct": -2.36,
-          "intraday_pct": -2.61
-        },
-        {
-          "name": "TIGER BBIG레버리지",
-          "ticker": "412560",
-          "pct": -2.32,
-          "intraday_pct": -2.76
         }
       ]
     },
@@ -15597,16 +15789,58 @@
           "intraday_pct": 1.79
         },
         {
+          "name": "PLUS 삼성전자단일종목레버리지",
+          "ticker": "0193K0",
+          "pct": 5.94,
+          "intraday_pct": 1.63
+        },
+        {
+          "name": "TIGER 삼성전자단일종목레버리지",
+          "ticker": "0195R0",
+          "pct": 5.75,
+          "intraday_pct": 1.28
+        },
+        {
+          "name": "KODEX 삼성전자단일종목레버리지",
+          "ticker": "0193W0",
+          "pct": 5.68,
+          "intraday_pct": 0.94
+        },
+        {
           "name": "SOL 반도체전공정",
           "ticker": "475300",
           "pct": 5.64,
           "intraday_pct": 3.55
         },
         {
+          "name": "RISE 삼성전자단일종목레버리지",
+          "ticker": "0192M0",
+          "pct": 5.49,
+          "intraday_pct": 0.93
+        },
+        {
+          "name": "1Q 삼성전자선물단일종목레버리지",
+          "ticker": "0198B0",
+          "pct": 5.41,
+          "intraday_pct": 1.45
+        },
+        {
+          "name": "ACE 삼성전자단일종목레버리지",
+          "ticker": "0194M0",
+          "pct": 5.39,
+          "intraday_pct": 0.91
+        },
+        {
           "name": "HANARO 미국AI메모리반도체TOP4+",
           "ticker": "0181B0",
           "pct": 5.23,
           "intraday_pct": 0.53
+        },
+        {
+          "name": "KIWOOM 삼성전자선물단일종목레버리지",
+          "ticker": "0194N0",
+          "pct": 5.2,
+          "intraday_pct": 0.59
         },
         {
           "name": "TIGER 미국필라델피아반도체레버리지(합성)",
@@ -15715,48 +15949,6 @@
           "ticker": "233740",
           "pct": 3.03,
           "intraday_pct": 0.94
-        },
-        {
-          "name": "PLUS 일본반도체소부장",
-          "ticker": "464920",
-          "pct": 3.01,
-          "intraday_pct": 2.18
-        },
-        {
-          "name": "ACE 레버리지",
-          "ticker": "152500",
-          "pct": 2.98,
-          "intraday_pct": -1.86
-        },
-        {
-          "name": "RISE 코스닥150선물레버리지",
-          "ticker": "278240",
-          "pct": 2.94,
-          "intraday_pct": 0.9
-        },
-        {
-          "name": "ACE 글로벌AI맞춤형반도체",
-          "ticker": "494340",
-          "pct": 2.92,
-          "intraday_pct": 1.44
-        },
-        {
-          "name": "KIWOOM 코스닥150선물레버리지",
-          "ticker": "291630",
-          "pct": 2.91,
-          "intraday_pct": 1.0
-        },
-        {
-          "name": "PLUS 글로벌희토류&전략자원생산기업",
-          "ticker": "415920",
-          "pct": 2.86,
-          "intraday_pct": 2.86
-        },
-        {
-          "name": "HANARO 코스닥150선물레버리지",
-          "ticker": "306530",
-          "pct": 2.85,
-          "intraday_pct": 1.08
         }
       ],
       "down": [
@@ -15765,6 +15957,12 @@
           "ticker": "0091P0",
           "pct": -5.83,
           "intraday_pct": -5.19
+        },
+        {
+          "name": "PLUS 삼성전자선물단일종목인버스2X",
+          "ticker": "0193L0",
+          "pct": -5.76,
+          "intraday_pct": -0.86
         },
         {
           "name": "SOL 한국원자력SMR",
@@ -15911,6 +16109,12 @@
           "intraday_pct": -3.47
         },
         {
+          "name": "SOL SK하이닉스선물단일종목인버스2X",
+          "ticker": "0197X0",
+          "pct": -2.51,
+          "intraday_pct": 4.11
+        },
+        {
           "name": "KIWOOM 미국원유에너지기업",
           "ticker": "474800",
           "pct": -2.48,
@@ -15927,18 +16131,6 @@
           "ticker": "496770",
           "pct": -2.37,
           "intraday_pct": -6.38
-        },
-        {
-          "name": "ACE 포스코그룹포커스",
-          "ticker": "469170",
-          "pct": -2.36,
-          "intraday_pct": -2.61
-        },
-        {
-          "name": "TIGER BBIG레버리지",
-          "ticker": "412560",
-          "pct": -2.32,
-          "intraday_pct": -2.76
         }
       ]
     }
