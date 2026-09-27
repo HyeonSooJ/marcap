@@ -24,6 +24,44 @@ ELIGIBLE_PATH = os.path.join(THIS_DIR, "eligible_etfs.json")
 DIVISIONS = ["국내주식형", "연금형", "글로벌형", "자율투자형"]
 TOP_N = 30
 
+# pykrx의 get_etf_ohlcv_by_ticker()(전종목 일괄조회)가 통째로 빠뜨리는 종목들.
+# 개별조회(get_etf_ohlcv_by_date)로는 정상 조회되는 걸 확인했음 (2026-09-27 확인).
+# "TIME 미국배당다우존스액티브"(0036D0)는 상장폐지가 확정돼 있어 목록에서 제외함.
+SUPPLEMENTAL_TICKERS = {
+    "0198D0": "1Q SK하이닉스선물단일종목레버리지",
+    "0198B0": "1Q 삼성전자선물단일종목레버리지",
+    "0194T0": "ACE SK하이닉스단일종목레버리지",
+    "0194M0": "ACE 삼성전자단일종목레버리지",
+    "0194R0": "KIWOOM SK하이닉스선물단일종목레버리지",
+    "0194N0": "KIWOOM 삼성전자선물단일종목레버리지",
+    "0193T0": "KODEX SK하이닉스단일종목레버리지",
+    "0193W0": "KODEX 삼성전자단일종목레버리지",
+    "489010": "PLUS 글로벌AI인프라",
+    "0193K0": "PLUS 삼성전자단일종목레버리지",
+    "0193L0": "PLUS 삼성전자선물단일종목인버스2X",
+    "0192L0": "RISE SK하이닉스단일종목레버리지",
+    "397420": "RISE 국채선물5년추종",
+    "0192M0": "RISE 삼성전자단일종목레버리지",
+    "0197W0": "SOL SK하이닉스단일종목레버리지",
+    "0197X0": "SOL SK하이닉스선물단일종목인버스2X",
+    "0195S0": "TIGER SK하이닉스단일종목레버리지",
+    "0195R0": "TIGER 삼성전자단일종목레버리지",
+}
+
+
+def single_close(ticker, date_str):
+    """일괄조회에서 빠진 종목 하나를 개별조회해서 종가만 뽑아낸다."""
+    try:
+        df = stock.get_etf_ohlcv_by_date(date_str, date_str, ticker)
+    except Exception:
+        return None
+    if df is None or df.empty:
+        return None
+    try:
+        return int(df["종가"].iloc[0])
+    except (TypeError, ValueError, KeyError):
+        return None
+
 
 def load_division_lists():
     """부문별 종목명 목록(dict[부문] = set(종목명))을 반환. 파일이 없으면 None(필터링 안 함)."""
@@ -87,6 +125,31 @@ def build_report(target):
         if close_prev <= 0:
             continue
         # 실제로 저장/표시되는 종가 값으로 등락률을 다시 계산해서 표시값과 항상 일치시킨다.
+        pct = round((close_today - close_prev) / close_prev * 100, 2)
+        if abs(pct) > SANITY_LIMIT:
+            flagged.append((name, ticker, pct, close_today, close_prev))
+            continue
+        divisions = [d for d in DIVISIONS if div_lists and name in div_lists.get(d, ())] if div_lists else []
+        rows.append({
+            "name": name,
+            "ticker": ticker,
+            "pct": pct,
+            "close_today": close_today,
+            "close_prev": close_prev,
+            "divisions": divisions,
+        })
+
+    # 일괄조회(get_etf_ohlcv_by_ticker)에서 통째로 빠지는 신상품군을 개별조회로 보정한다.
+    existing_tickers = set(merged.index)
+    for ticker, name in SUPPLEMENTAL_TICKERS.items():
+        if ticker in existing_tickers:
+            continue
+        if all_eligible is not None and name not in all_eligible:
+            continue
+        close_today = single_close(ticker, target)
+        close_prev = single_close(ticker, prev)
+        if close_today is None or close_prev is None or close_prev <= 0:
+            continue
         pct = round((close_today - close_prev) / close_prev * 100, 2)
         if abs(pct) > SANITY_LIMIT:
             flagged.append((name, ticker, pct, close_today, close_prev))
