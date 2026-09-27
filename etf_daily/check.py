@@ -54,13 +54,16 @@ def single_ohlc(ticker, date_str):
     """일괄조회에서 빠진 종목 하나를 개별조회해서 시가/종가를 뽑아낸다."""
     try:
         df = stock.get_etf_ohlcv_by_date(date_str, date_str, ticker)
-    except Exception:
+    except Exception as e:
+        print(f"   [보정 실패] {ticker} {date_str}: 조회 중 예외 발생 - {type(e).__name__}: {e}")
         return None, None
     if df is None or df.empty:
+        print(f"   [보정 실패] {ticker} {date_str}: 조회 결과 비어있음")
         return None, None
     try:
         return int(df["시가"].iloc[0]), int(df["종가"].iloc[0])
-    except (TypeError, ValueError, KeyError):
+    except (TypeError, ValueError, KeyError) as e:
+        print(f"   [보정 실패] {ticker} {date_str}: 시가/종가 파싱 실패 - {type(e).__name__}: {e} / columns={list(df.columns)}")
         return None, None
 
 
@@ -147,10 +150,14 @@ def build_report(target):
 
     # 일괄조회(get_etf_ohlcv_by_ticker)에서 통째로 빠지는 신상품군을 개별조회로 보정한다.
     existing_tickers = set(merged.index)
+    supplemental_added = 0
+    print(f"보정 대상 신상품 {len(SUPPLEMENTAL_TICKERS)}개 처리 시작...")
     for ticker, name in SUPPLEMENTAL_TICKERS.items():
         if ticker in existing_tickers:
+            print(f"   [보정 불필요] {ticker} {name}: 이미 일괄조회 결과에 포함됨")
             continue
         if all_eligible is not None and name not in all_eligible:
+            print(f"   [보정 제외] {ticker} {name}: 대회 명단에 없음")
             continue
         open_today, close_today = single_ohlc(ticker, target)
         _, close_prev = single_ohlc(ticker, prev)
@@ -172,6 +179,8 @@ def build_report(target):
             "close_prev": close_prev,
             "divisions": divisions,
         })
+        supplemental_added += 1
+    print(f"보정으로 추가된 종목: {supplemental_added}개")
 
     rows.sort(key=lambda x: x["pct"], reverse=True)
 
