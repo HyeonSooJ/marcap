@@ -117,32 +117,26 @@ def build_report(target):
             name = stock.get_etf_ticker_name(ticker)
         except Exception:
             name = ticker
+        # 일부 신상품 티커는 get_etf_ticker_name()이 문자열이 아니라 중복된
+        # pandas Series를 반환하는 경우가 있어(pykrx 내부 명단 중복), 그런
+        # 경우는 여기서 걸러지고 아래 SUPPLEMENTAL_TICKERS 보정 단계에서
+        # 하드코딩된 이름으로 개별 재조회된다.
         if not isinstance(name, str) or not name.strip():
-            if ticker in SUPPLEMENTAL_TICKERS:
-                print(f"   [일괄조회 내 제외] {ticker}: 이름 조회 실패 (name={name!r})")
             continue
         name = name.strip()
         if all_eligible is not None and name not in all_eligible:
-            if ticker in SUPPLEMENTAL_TICKERS:
-                print(f"   [일괄조회 내 제외] {ticker}: 대회 명단 불일치 - pykrx 이름={name!r} / 하드코딩 이름={SUPPLEMENTAL_TICKERS[ticker]!r}")
             continue
         try:
             open_today = int(r[open_col])
             close_today = int(r[f"{close_col}_today"])
             close_prev = int(r[f"{close_col}_prev"])
         except (TypeError, ValueError):
-            if ticker in SUPPLEMENTAL_TICKERS:
-                print(f"   [일괄조회 내 제외] {ticker} {name}: 시가/종가 값 변환 실패 - {dict(r)}")
             continue
         if close_prev <= 0:
-            if ticker in SUPPLEMENTAL_TICKERS:
-                print(f"   [일괄조회 내 제외] {ticker} {name}: 전일 종가가 0 이하 ({close_prev})")
             continue
         # 실제로 저장/표시되는 종가 값으로 등락률을 다시 계산해서 표시값과 항상 일치시킨다.
         pct = round((close_today - close_prev) / close_prev * 100, 2)
         if abs(pct) > SANITY_LIMIT:
-            if ticker in SUPPLEMENTAL_TICKERS:
-                print(f"   [일괄조회 내 제외] {ticker} {name}: 등락률 이상치 ({pct}%)")
             flagged.append((name, ticker, pct, close_today, close_prev))
             continue
         intraday_pct = round((close_today - open_today) / open_today * 100, 2) if open_today > 0 else None
