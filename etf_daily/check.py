@@ -50,18 +50,18 @@ SUPPLEMENTAL_TICKERS = {
 }
 
 
-def single_close(ticker, date_str):
-    """일괄조회에서 빠진 종목 하나를 개별조회해서 종가만 뽑아낸다."""
+def single_ohlc(ticker, date_str):
+    """일괄조회에서 빠진 종목 하나를 개별조회해서 시가/종가를 뽑아낸다."""
     try:
         df = stock.get_etf_ohlcv_by_date(date_str, date_str, ticker)
     except Exception:
-        return None
+        return None, None
     if df is None or df.empty:
-        return None
+        return None, None
     try:
-        return int(df["종가"].iloc[0])
+        return int(df["시가"].iloc[0]), int(df["종가"].iloc[0])
     except (TypeError, ValueError, KeyError):
-        return None
+        return None, None
 
 
 def load_division_lists():
@@ -95,12 +95,13 @@ def build_report(target):
     prev = prev_business_day(target)
     prev_df = stock.get_etf_ohlcv_by_ticker(prev)
 
+    open_col = "시가"
     close_col = "종가"
-    merged = today_df[[close_col]].join(
+    merged = today_df[[open_col, close_col]].join(
         prev_df[[close_col]], lsuffix="_today", rsuffix="_prev", how="inner"
     )
     merged = merged[merged[f"{close_col}_prev"] > 0]
-    merged = merged.dropna(subset=[f"{close_col}_today", f"{close_col}_prev"])
+    merged = merged.dropna(subset=[open_col, f"{close_col}_today", f"{close_col}_prev"])
 
     div_lists = load_division_lists()
     all_eligible = set().union(*div_lists.values()) if div_lists else None
@@ -119,6 +120,7 @@ def build_report(target):
         if all_eligible is not None and name not in all_eligible:
             continue
         try:
+            open_today = int(r[open_col])
             close_today = int(r[f"{close_col}_today"])
             close_prev = int(r[f"{close_col}_prev"])
         except (TypeError, ValueError):
@@ -130,11 +132,14 @@ def build_report(target):
         if abs(pct) > SANITY_LIMIT:
             flagged.append((name, ticker, pct, close_today, close_prev))
             continue
+        intraday_pct = round((close_today - open_today) / open_today * 100, 2) if open_today > 0 else None
         divisions = [d for d in DIVISIONS if div_lists and name in div_lists.get(d, ())] if div_lists else []
         rows.append({
             "name": name,
             "ticker": ticker,
             "pct": pct,
+            "intraday_pct": intraday_pct,
+            "open_today": open_today,
             "close_today": close_today,
             "close_prev": close_prev,
             "divisions": divisions,
@@ -147,19 +152,22 @@ def build_report(target):
             continue
         if all_eligible is not None and name not in all_eligible:
             continue
-        close_today = single_close(ticker, target)
-        close_prev = single_close(ticker, prev)
+        open_today, close_today = single_ohlc(ticker, target)
+        _, close_prev = single_ohlc(ticker, prev)
         if close_today is None or close_prev is None or close_prev <= 0:
             continue
         pct = round((close_today - close_prev) / close_prev * 100, 2)
         if abs(pct) > SANITY_LIMIT:
             flagged.append((name, ticker, pct, close_today, close_prev))
             continue
+        intraday_pct = round((close_today - open_today) / open_today * 100, 2) if open_today and open_today > 0 else None
         divisions = [d for d in DIVISIONS if div_lists and name in div_lists.get(d, ())] if div_lists else []
         rows.append({
             "name": name,
             "ticker": ticker,
             "pct": pct,
+            "intraday_pct": intraday_pct,
+            "open_today": open_today,
             "close_today": close_today,
             "close_prev": close_prev,
             "divisions": divisions,
@@ -174,7 +182,7 @@ def build_report(target):
 
     def top_n(entries, reverse):
         s = sorted(entries, key=lambda x: x["pct"], reverse=reverse)[:TOP_N]
-        return [{"name": e["name"], "ticker": e["ticker"], "pct": e["pct"]} for e in s]
+        return [{"name": e["name"], "ticker": e["ticker"], "pct": e["pct"], "intraday_pct": e["intraday_pct"]} for e in s]
 
     by_division = {
         "전체": {"up": top_n(rows, True), "down": top_n(rows, False)},
