@@ -32,4 +32,20 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add etf_daily/data/
-          git diff-index --quiet HEAD || (git commit -m "etf_daily: update daily mover check [skip ci]" && git push origin master)
+          if git diff-index --quiet HEAD; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          git commit -m "etf_daily: update daily mover check [skip ci]"
+          for i in 1 2 3 4 5; do
+            git fetch origin master
+            if git rebase origin/master && git push origin master; then
+              echo "Push succeeded on attempt $i"
+              exit 0
+            fi
+            echo "Push attempt $i failed, retrying..."
+            git rebase --abort 2>/dev/null || true
+            sleep $((i * 5))
+          done
+          echo "All push attempts failed"
+          exit 1
