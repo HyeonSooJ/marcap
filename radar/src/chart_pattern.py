@@ -14,6 +14,8 @@
   4. 횡보 후 급등형 - 대부분 구간은 옆으로 횡보하다가 막판에 거의 수직으로 급등
 """
 
+import os
+
 import numpy as np
 import pandas as pd
 
@@ -239,6 +241,34 @@ def filter_top_marcap(df, top_n=TOP_MARCAP_N):
     snapshot = df[df.index == last_date]
     top_codes = set(snapshot.loc[snapshot['Rank'] <= top_n, 'Code'])
     return df[df['Code'].isin(top_codes)]
+
+
+# 모의투자 대회처럼 "정해진 종목군 안에서만" 찾아야 하는 경우를 위한 전용 필터.
+# radar/data/contest_universe.csv에 Code,Name,Index 컬럼으로 대상 종목을 넣어두면
+# 된다(현재는 2026-10 기준 코스피200+코스닥150, 351종목). 대회가 바뀌면 이 CSV만
+# 새로 교체하면 된다 — 코드 수정 불필요.
+CONTEST_UNIVERSE_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'contest_universe.csv',
+)
+
+
+def load_contest_universe(path=CONTEST_UNIVERSE_PATH):
+    """대회 전용 종목 목록(Code, Name, Index)을 읽어온다. 파일이 없으면 빈 DataFrame."""
+    if not os.path.exists(path):
+        return pd.DataFrame(columns=['Code', 'Name', 'Index'])
+    universe = pd.read_csv(path, dtype={'Code': str})
+    universe['Code'] = universe['Code'].str.zfill(6)
+    return universe
+
+
+def filter_contest_universe(df, universe_codes=None):
+    """대회 종목 목록(코드)에 속한 종목만 남긴다.
+
+    :param universe_codes: 대상 종목 코드 집합. None이면 CONTEST_UNIVERSE_PATH에서 읽어온다.
+    """
+    if universe_codes is None:
+        universe_codes = set(load_contest_universe()['Code'])
+    return df[df['Code'].isin(universe_codes)]
 
 
 def _resample_normalize(values, n_points=N_POINTS):

@@ -28,6 +28,7 @@ from src.chart_pattern import (  # noqa: E402
     PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY, SURGE_TOP_MARCAP_N,
     resolve_date_range, filter_single_stocks, filter_top_marcap, find_matching_stocks,
     find_halted_stocks, find_presurge_pattern_stocks, find_limitup_continuation_stocks,
+    load_contest_universe, filter_contest_universe,
 )
 from marcap_utils import marcap_data  # noqa: E402
 
@@ -246,6 +247,13 @@ with tab5:
         format_func=lambda k: pattern_label(k, lang), key='pattern_key',
     )
 
+    _contest_universe = load_contest_universe()
+    contest_mode = False
+    if not _contest_universe.empty:
+        contest_mode = st.checkbox(
+            t('tab5_contest_mode_label', lang, n=len(_contest_universe)), key='contest_mode',
+        )
+
     if st.button(t('tab5_confirm_button', lang), type='primary'):
         # ⑥ 상한가 지속형(오늘 상한가+모양 필터 포함)은 실제 검증(최근 2개월 고정 기준)과
         # 동일한 조건으로 계산해야 검증된 적중률이 의미가 있어서, ②개월수 선택과 무관하게
@@ -262,12 +270,18 @@ with tab5:
                 st.session_state['pattern_result'] = None
             else:
                 df = filter_single_stocks(df)
-                # ⑤⑥(급등주 찾기 메뉴)은 사용자 선택에 따라 시가총액 상위
-                # SURGE_TOP_MARCAP_N까지(사실상 전종목) 넓혀서 본다 — 기본
-                # TOP_MARCAP_N(2000위)으로는 실제 급등주(2026-09-04 E8 2767위,
-                # KS인더스트리 2781위)가 애초에 검색 대상에서 빠지는 게 확인됐다.
-                is_surge_menu = pattern_key in (PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
-                df = filter_top_marcap(df, top_n=SURGE_TOP_MARCAP_N) if is_surge_menu else filter_top_marcap(df)
+                if contest_mode:
+                    # 대회 모드에서는 시가총액 기준 필터(①~⑥ 공통) 대신 대회 종목
+                    # 목록으로만 제한한다 — 이미 고정된 350종목짜리 집합이라 시총
+                    # 상위 몇 위까지 볼지는 의미가 없다.
+                    df = filter_contest_universe(df, universe_codes=set(_contest_universe['Code']))
+                else:
+                    # ⑤⑥(급등주 찾기 메뉴)은 사용자 선택에 따라 시가총액 상위
+                    # SURGE_TOP_MARCAP_N까지(사실상 전종목) 넓혀서 본다 — 기본
+                    # TOP_MARCAP_N(2000위)으로는 실제 급등주(2026-09-04 E8 2767위,
+                    # KS인더스트리 2781위)가 애초에 검색 대상에서 빠지는 게 확인됐다.
+                    is_surge_menu = pattern_key in (PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
+                    df = filter_top_marcap(df, top_n=SURGE_TOP_MARCAP_N) if is_surge_menu else filter_top_marcap(df)
                 if is_halt:
                     matched = find_halted_stocks(df)
                 elif pattern_key == PRESURGE_PATTERN_KEY:
@@ -278,6 +292,7 @@ with tab5:
                     matched = find_matching_stocks(df, pattern_key)
                 if matched.empty:
                     st.session_state['pattern_result'] = matched
+                    st.session_state['pattern_contest_mode'] = contest_mode
                 else:
                     try:
                         from src.sector_data import get_sector_and_per
@@ -290,6 +305,7 @@ with tab5:
                     st.session_state['pattern_result'] = matched
                     st.session_state['pattern_range'] = (start, end)
                     st.session_state['pattern_result_key'] = pattern_key
+                    st.session_state['pattern_contest_mode'] = contest_mode
                     matched_codes = set(matched['Code'])
                     st.session_state['pattern_chart_df'] = (
                         df[df['Code'].isin(matched_codes)][['Code', 'Name', 'Close']].copy()
@@ -303,9 +319,13 @@ with tab5:
             st.info(t('tab5_today_momentum_empty', lang))
         else:
             st.info(t('tab5_no_match', lang))
+        if st.session_state.get('pattern_contest_mode'):
+            st.caption(t('tab5_contest_mode_note', lang, n=len(_contest_universe)))
     else:
         start, end = st.session_state['pattern_range']
         st.caption(t('tab5_result_caption', lang, start=start.date(), end=end.date(), n=len(matched)))
+        if st.session_state.get('pattern_contest_mode'):
+            st.caption(t('tab5_contest_mode_note', lang, n=len(_contest_universe)))
         result_key = st.session_state.get('pattern_result_key')
         show_cols = ['Name', 'Close', 'Sector', 'Marcap', 'PER']
         if result_key == HALT_PATTERN_KEY:

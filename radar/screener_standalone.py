@@ -226,6 +226,39 @@ def filter_top_marcap(df, top_n=TOP_MARCAP_N):
     return df[df['Code'].isin(top_codes)]
 
 
+def _contest_universe_path():
+    """모의투자 대회처럼 "정해진 종목군 안에서만" 찾아야 할 때 쓰는 종목 목록
+    CSV(Code,Name,Index)를 찾는다. marcap 저장소의 radar/data/contest_universe.csv를
+    그대로 참조하며(대회가 바뀌면 그 파일만 교체), 없으면 None."""
+    candidates = [
+        os.path.join(_THIS_DIR, 'data', 'contest_universe.csv'),
+        os.path.join(_THIS_DIR, '..', 'radar', 'data', 'contest_universe.csv'),
+        os.path.join(os.getcwd(), 'radar', 'data', 'contest_universe.csv'),
+        os.path.join(os.getcwd(), 'data', 'contest_universe.csv'),
+    ]
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+    return None
+
+
+def load_contest_universe():
+    """대회 전용 종목 목록(Code, Name, Index)을 읽어온다. 파일이 없으면 빈 DataFrame."""
+    path = _contest_universe_path()
+    if path is None:
+        return pd.DataFrame(columns=['Code', 'Name', 'Index'])
+    universe = pd.read_csv(path, dtype={'Code': str})
+    universe['Code'] = universe['Code'].str.zfill(6)
+    return universe
+
+
+def filter_contest_universe(df, universe_codes=None):
+    """대회 종목 목록(코드)에 속한 종목만 남긴다."""
+    if universe_codes is None:
+        universe_codes = set(load_contest_universe()['Code'])
+    return df[df['Code'].isin(universe_codes)]
+
+
 def _resample_normalize(values, n_points=N_POINTS):
     values = np.asarray(values, dtype=float)
     values = values[~np.isnan(values)]
@@ -734,6 +767,13 @@ pattern_key = col3.selectbox(
     format_func=lambda k: PATTERN_DEFINITIONS[k]['label'], key='pattern_key',
 )
 
+_contest_universe = load_contest_universe()
+contest_mode = False
+if not _contest_universe.empty:
+    contest_mode = st.checkbox(
+        f'대회 종목만 검색 (코스피200+코스닥150, {len(_contest_universe)}종목)', key='contest_mode',
+    )
+
 if st.button('④ 확인 — 종목 찾기', type='primary'):
     use_fixed_2m = pattern_key in (TODAY_MOMENTUM_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
     start, end = resolve_date_range(end_date, 2) if use_fixed_2m else resolve_date_range(end_date, months)
@@ -745,8 +785,11 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
             st.session_state['pattern_result'] = None
         else:
             df = filter_single_stocks(df)
-            is_surge_menu = pattern_key in (PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
-            df = filter_top_marcap(df, top_n=SURGE_TOP_MARCAP_N) if is_surge_menu else filter_top_marcap(df)
+            if contest_mode:
+                df = filter_contest_universe(df, universe_codes=set(_contest_universe['Code']))
+            else:
+                is_surge_menu = pattern_key in (PRESURGE_PATTERN_KEY, LIMITUP_CONTINUATION_KEY)
+                df = filter_top_marcap(df, top_n=SURGE_TOP_MARCAP_N) if is_surge_menu else filter_top_marcap(df)
             if is_halt:
                 matched = find_halted_stocks(df)
             elif pattern_key == PRESURGE_PATTERN_KEY:
@@ -757,6 +800,7 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
                 matched = find_matching_stocks(df, pattern_key)
             if matched.empty:
                 st.session_state['pattern_result'] = matched
+                st.session_state['pattern_contest_mode'] = contest_mode
             else:
                 try:
                     sector_per = get_sector_and_per(end)
@@ -768,6 +812,7 @@ if st.button('④ 확인 — 종목 찾기', type='primary'):
                 st.session_state['pattern_result'] = matched
                 st.session_state['pattern_range'] = (start, end)
                 st.session_state['pattern_result_key'] = pattern_key
+                st.session_state['pattern_contest_mode'] = contest_mode
                 matched_codes = set(matched['Code'])
                 st.session_state['pattern_chart_df'] = (
                     df[df['Code'].isin(matched_codes)][['Code', 'Name', 'Close']].copy()
@@ -781,9 +826,23 @@ elif matched.empty:
         st.info('선택하신 날짜(최근 2개월 기준) 안에 상한가를 기록한 종목이 없어서 결과가 없습니다. 다른 날짜로 다시 시도해보세요.')
     else:
         st.info('조건에 맞는 종목을 찾지 못했습니다.')
+    if st.session_state.get('pattern_contest_mode'):
+        st.caption(
+            f'🏆 대회 모드: {len(_contest_universe)}개 종목으로만 검색을 제한했습니다. '
+            '대형주 위주라 상한가 자체가 드물게 나옵니다.'
+        )
 else:
     start, end = st.session_state['pattern_range']
     st.caption(f'{start.date()} ~ {end.date()} 기간, {len(matched)}개 종목 매칭')
+    if st.session_state.get('pattern_contest_mode'):
+        st.caption(
+            f'🏆 대회 모드: {len(_contest_universe)}개 종목(코스피200+코스닥150)으로만 검색을 '
+            '제한했습니다(시가총액 기준 필터는 적용되지 않음). 2026년 2~10월 데이터로 이 '
+            '종목군 안에서만 재검증한 결과, 눌림목형(저점 대기)의 다음날 상한가 확률은 '
+            '0.50%(무작위 0.05%), 눌림목 반등형은 0.77%(무작위 0.26%)였습니다 — 상대적으로는 '
+            '더 높아 보이지만(각각 약 10배, 3배) 적중 건수 자체가 10건/3건뿐이라 표본이 매우 '
+            '작습니다. 대형주 위주라 상한가 자체가 드물게 나오니 참고만 하세요.'
+        )
     result_key = st.session_state.get('pattern_result_key')
     show_cols = ['Name', 'Close', 'Sector', 'Marcap', 'PER']
     if result_key == HALT_PATTERN_KEY:

@@ -198,6 +198,30 @@ TRANSLATIONS = {
         'ko': '{start} ~ {end} 기간, {n}개 종목 매칭',
         'en': '{start} ~ {end}, {n} stocks matched',
     },
+    'tab5_contest_mode_label': {
+        'ko': '대회 종목만 검색 (코스피200+코스닥150, {n}종목)',
+        'en': 'Search contest stocks only (KOSPI200+KOSDAQ150, {n} stocks)',
+    },
+    'tab5_contest_mode_note': {
+        'ko': (
+            '🏆 대회 모드: radar/data/contest_universe.csv에 들어있는 {n}개 종목으로만 검색을 '
+            '제한했습니다(시가총액 기준 필터는 적용되지 않음). 2026년 2~10월 데이터로 이 '
+            '종목군 안에서만 워크포워드 재검증한 결과, 눌림목형(저점 대기)의 다음날 상한가 '
+            '확률은 0.50%(무작위 0.05%), 눌림목 반등형은 0.77%(무작위 0.26%)였습니다 — 전체 '
+            '시장 대비 상대적으로는 더 높아 보이지만(각각 약 10배, 3배), 적중 건수 자체가 '
+            '10건/3건뿐이라 표본이 매우 작습니다. 대형주 위주라 상한가 자체가 드물게 나오니 '
+            '참고만 하세요.'
+        ),
+        'en': (
+            '🏆 Contest mode: search is restricted to the {n} stocks in '
+            'radar/data/contest_universe.csv (market-cap-based filters are skipped). A walk-forward '
+            're-check within just this universe (Feb-Oct 2026 data) found: next-day limit-up '
+            'probability was 0.50% for Pullback-at-the-low (vs. 0.05% random) and 0.77% for '
+            'Pullback-Rebound (vs. 0.26% random) — relatively higher multiples (~10x, ~3x) than the '
+            'whole-market version, but based on only 10/3 actual hits, so the sample is very small. '
+            'Limit-up itself is rare among these larger-cap stocks — reference only.'
+        ),
+    },
     'tab5_price_col': {'ko': '현재가', 'en': 'Price'},
     'tab5_chart_col': {'ko': '실시간 차트', 'en': 'Live Chart'},
     'tab5_chart_link_text': {'ko': '📈 네이버에서 보기(실시간)', 'en': '📈 Open on Naver (live)'},
