@@ -35,6 +35,10 @@
     });
     let data = null;
     try { data = await res.json(); } catch { /* 빈 응답 */ }
+    if (res.status === 401 && path !== "/api/login") {
+      location.href = "/login";
+      throw new Error("로그인이 필요합니다.");
+    }
     if (!res.ok) {
       let msg = data && data.detail;
       if (Array.isArray(msg)) msg = msg.map((d) => String(d.msg || d).replace(/^Value error, /, "")).join(", ");
@@ -87,12 +91,18 @@
       b.textContent = s.env_label;
       b.className = `badge ${s.env}`;
       $("#accountLabel").textContent = `계좌 ${s.account}`;
+      $("#logoutBtn").hidden = !s.auth;
       if (s.env === "demo") toast("API 키가 없어 DEMO 모드로 실행 중입니다. 시세·주문은 가상입니다.");
       if (s.env === "prod") toast("실전투자 계좌에 연결되었습니다. 주문은 실제로 체결됩니다.", "error");
     } catch (e) {
       $("#modeBadge").textContent = "서버 연결 실패";
     }
   }
+
+  $("#logoutBtn").addEventListener("click", async () => {
+    await fetch("/api/logout", { method: "POST" });
+    location.href = "/login";
+  });
 
   // ------------------------------------------------------------------ 검색
   const searchInput = $("#searchInput");

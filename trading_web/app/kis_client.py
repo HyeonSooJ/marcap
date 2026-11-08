@@ -20,7 +20,7 @@ import asyncio
 import json
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -29,6 +29,14 @@ from .config import Settings
 from .stocks import stock_master
 
 log = logging.getLogger(__name__)
+
+
+KST = timezone(timedelta(hours=9))
+
+
+def now_kst() -> datetime:
+    """서버(클라우드)가 UTC 여도 한국 시간 기준으로 동작하도록 KST 현재시각 (naive) 반환."""
+    return datetime.now(KST).replace(tzinfo=None)
 
 
 class KisError(Exception):
@@ -99,7 +107,7 @@ class KisClient:
         try:
             data = json.loads(self._token_file.read_text(encoding="utf-8"))
             exp = datetime.fromisoformat(data["expires"])
-            if exp > datetime.now() + timedelta(minutes=5):
+            if exp > now_kst() + timedelta(minutes=5):
                 self._token, self._token_exp = data["token"], exp
         except Exception:
             pass
@@ -108,7 +116,7 @@ class KisClient:
         async with self._token_lock:
             if not self._token:
                 self._load_cached_token()
-            if self._token and self._token_exp > datetime.now() + timedelta(minutes=5):
+            if self._token and self._token_exp > now_kst() + timedelta(minutes=5):
                 return self._token
             # 접근토큰은 유효기간 24시간이며 1분당 1회만 발급 가능 → 파일로 캐시해서 재사용
             r = await self._http.post("/oauth2/tokenP", json={
@@ -124,7 +132,7 @@ class KisClient:
             try:
                 self._token_exp = datetime.strptime(exp_str, "%Y-%m-%d %H:%M:%S")
             except (TypeError, ValueError):
-                self._token_exp = datetime.now() + timedelta(seconds=int(data.get("expires_in", 86400)))
+                self._token_exp = now_kst() + timedelta(seconds=int(data.get("expires_in", 86400)))
             try:
                 self.s.token_dir.mkdir(parents=True, exist_ok=True)
                 self._token_file.write_text(json.dumps(
@@ -209,7 +217,7 @@ class KisClient:
             "market_cap": to_int(o.get("hts_avls")) * 100_000_000,  # 억원 단위
             "tick": to_int(o.get("aspr_unit")) or tick_size(price),
             "status_code": o.get("iscd_stat_cls_code", ""),
-            "time": datetime.now().strftime("%H:%M:%S"),
+            "time": now_kst().strftime("%H:%M:%S"),
         }
 
     async def orderbook(self, code: str) -> dict:
@@ -232,7 +240,7 @@ class KisClient:
         }
 
     async def chart(self, code: str, period: str = "D") -> list[dict]:
-        end = datetime.now()
+        end = now_kst()
         span = {"D": 150, "W": 7 * 100, "M": 31 * 100, "Y": 366 * 30}[period]
         data, _ = await self._request(
             "GET", "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice", "FHKST03010100",
@@ -365,7 +373,7 @@ class KisClient:
                 "time": o.get("ORD_TMD", ""), "message": data.get("msg1", "")}
 
     async def orders(self) -> list[dict]:
-        today = datetime.now().strftime("%Y%m%d")
+        today = now_kst().strftime("%Y%m%d")
         out: list[dict] = []
         fk = nk = ""
         tr_cont = ""

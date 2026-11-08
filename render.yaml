@@ -1,0 +1,29 @@
+# Render (https://render.com) 배포 설정 - KIS Trader (trading_web)
+# Render 대시보드 → New → Blueprint → 이 저장소 선택 → 아래 sync:false 값들을 입력
+services:
+  - type: web
+    name: kis-trader
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: trading_web
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips="*"
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: KIS_ENV
+        value: vps
+      - key: REQUIRE_PASSWORD
+        value: "1"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: KIS_APP_KEY
+        sync: false
+      - key: KIS_APP_SECRET
+        sync: false
+      - key: KIS_ACCOUNT
+        sync: false
+      - key: APP_PASSWORD
+        sync: false

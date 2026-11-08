@@ -6,6 +6,7 @@ parquet 을 읽을 수 없으면 소수의 대표 종목만 사용합니다.
 """
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,6 +14,8 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 REPO_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
+# 클라우드 배포용 경량 종목 목록 (pandas 없이 사용). 갱신: python -m app.stocks
+STOCKS_JSON = Path(__file__).resolve().parent / "stocks.json"
 
 _FALLBACK = [
     ("005930", "삼성전자", "KOSPI", 70000),
@@ -65,6 +68,13 @@ class StockMaster:
                 return
             except Exception as e:  # pyarrow 미설치 등
                 log.warning("parquet 로드 실패, 기본 종목만 사용합니다: %s", e)
+        if STOCKS_JSON.exists():
+            data = json.loads(STOCKS_JSON.read_text(encoding="utf-8"))
+            for r in data["stocks"]:
+                self.stocks[r[0]] = Stock(*r)
+            self.as_of = data["as_of"]
+            log.info("종목 마스터 로드: stocks.json (%d 종목, %s)", len(self.stocks), self.as_of)
+            return
         for i, (code, name, market, close) in enumerate(_FALLBACK, 1):
             self.stocks[code] = Stock(code, name, market, i, close, close, 0)
 
@@ -94,3 +104,10 @@ class StockMaster:
 
 
 stock_master = StockMaster()
+
+if __name__ == "__main__":  # marcap parquet → stocks.json 생성
+    rows = [[x.code, x.name, x.market, x.rank, x.close, x.prev_close, x.volume]
+            for x in stock_master.stocks.values()]
+    STOCKS_JSON.write_text(json.dumps({"as_of": stock_master.as_of, "stocks": rows},
+                                      ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"{STOCKS_JSON} 저장: {len(rows)} 종목 ({stock_master.as_of})")

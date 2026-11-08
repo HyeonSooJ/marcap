@@ -11,7 +11,7 @@ import random
 import time
 from datetime import datetime, timedelta
 
-from .kis_client import KisError, tick_size
+from .kis_client import KisError, now_kst, tick_size
 from .stocks import stock_master
 
 START_CASH = 10_000_000
@@ -83,7 +83,7 @@ class DemoClient:
             "volume": s.volume, "amount": s.volume * s.price,
             "per": 0, "pbr": 0, "eps": 0, "w52_high": 0, "w52_low": 0, "frgn_rate": 0,
             "market_cap": 0, "tick": tick_size(s.price), "status_code": "",
-            "time": datetime.now().strftime("%H:%M:%S"),
+            "time": now_kst().strftime("%H:%M:%S"),
         }
 
     async def orderbook(self, code: str) -> dict:
@@ -95,7 +95,7 @@ class DemoClient:
         return {"code": code, "asks": asks, "bids": bids,
                 "total_ask": sum(a["qty"] for a in asks), "total_bid": sum(b["qty"] for b in bids),
                 "price": s.price, "base": s.prev_close, "expected_price": 0,
-                "time": datetime.now().strftime("%H%M%S")}
+                "time": now_kst().strftime("%H%M%S")}
 
     async def chart(self, code: str, period: str = "D") -> list[dict]:
         s = self._sim(code)
@@ -106,7 +106,7 @@ class DemoClient:
         for _ in range(n - 1):
             closes.append(closes[-1] / (1 + rnd.gauss(0.0005 * step, 0.02 * step ** 0.5)))
         closes.reverse()
-        rows, day = [], datetime.now() - timedelta(days=step * n)
+        rows, day = [], now_kst() - timedelta(days=step * n)
         prev = closes[0]
         for c in closes:
             day += timedelta(days=step)
@@ -186,13 +186,13 @@ class DemoClient:
         no = f"{next(self._seq):010d}"
         self._orders.append({
             "order_no": no, "org_order_no": "", "org_no": "00950",
-            "time": datetime.now().strftime("%H%M%S"), "code": code, "name": stock_master.name(code),
+            "time": now_kst().strftime("%H%M%S"), "code": code, "name": stock_master.name(code),
             "side": side, "type": "지정가" if ord_dvsn == "00" else "시장가", "market": ord_dvsn == "01",
             "qty": qty, "price": price if ord_dvsn == "00" else 0, "filled_qty": 0, "avg_price": 0,
             "remain_qty": qty, "cancelled": False, "cancellable": True,
         })
         self._match(code, s.price)
-        return {"order_no": no, "org_no": "00950", "time": datetime.now().strftime("%H%M%S"),
+        return {"order_no": no, "org_no": "00950", "time": now_kst().strftime("%H%M%S"),
                 "message": "[DEMO] 주문 전송 완료 되었습니다."}
 
     def _match(self, code: str, price: int) -> None:

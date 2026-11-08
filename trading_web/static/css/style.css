@@ -246,3 +246,34 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
   .big { font-size: 26px; }
   .chart-wrap { height: 240px; }
 }
+
+/* ===== 로그인 ===== */
+.login-page { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.login-box { width: min(340px, 100%); padding: 28px 24px; display: flex; flex-direction: column; gap: 10px; }
+.login-box .brand { font-size: 18px; margin-bottom: 10px; justify-content: center; }
+.login-box label { font-size: 12px; color: var(--muted); }
+.login-box input { padding: 11px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); outline: none; font-size: 16px; }
+.login-box input:focus { border-color: var(--accent); }
+.login-err { margin: 0; color: var(--up); font-size: 13px; }
+
+/* ===== 휴대폰: 현재가 → 주문 → 호가 → 차트 → 계좌 순서 ===== */
+@media (max-width: 780px) {
+  .center, .right { display: contents; }
+  .quote { order: 1; }
+  .order { order: 2; }
+  .book { order: 3; }
+  .chart-panel { order: 4; }
+  .account { order: 5; }
+  .side { order: 6; }
+  .quote { padding: 14px; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+  .stepper input, .search input { font-size: 16px; } /* iOS 입력 시 확대 방지 */
+  .submit { padding: 14px; }
+  .grid { font-size: 12px; }
+  .top-right { gap: 6px; }
+  .badge { font-size: 11px; padding: 2px 7px; }
+  .brand-name { font-size: 15px; }
+  .quote-time { white-space: nowrap; }
+  /* 호가는 매도·매수 각 5단만 */
+  .orderbook tr:nth-child(-n+5), .orderbook tr:nth-child(n+16):not(.total) { display: none; }
+}

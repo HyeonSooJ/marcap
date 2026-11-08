@@ -22,7 +22,9 @@ from .stocks import stock_master
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("trading_web")
 
-settings = load_settings()
+settings = load_settings()  # .env 를 먼저 읽은 뒤 auth 를 import (APP_PASSWORD 사용)
+from . import auth  # noqa: E402
+
 client: KisClient | DemoClient
 
 
@@ -35,7 +37,10 @@ async def lifespan(_: FastAPI):
     await client.close()
 
 
-app = FastAPI(title="KIS 주식 매매", lifespan=lifespan)
+app = FastAPI(title="KIS 주식 매매", lifespan=lifespan,
+              docs_url=None if auth.enabled() else "/docs", redoc_url=None,
+              openapi_url=None if auth.enabled() else "/openapi.json")
+app.middleware("http")(auth.middleware)
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
 CODE = Path(..., pattern=r"^[0-9A-Z]{6}$", description="6자리 종목코드")
@@ -51,11 +56,47 @@ async def index():
     return FileResponse(BASE_DIR / "static" / "index.html")
 
 
+@app.get("/login", include_in_schema=False)
+async def login_page():
+    return FileResponse(BASE_DIR / "static" / "login.html")
+
+
+class LoginReq(BaseModel):
+    password: str = Field(max_length=200)
+
+
+@app.post("/api/login")
+async def login(req: LoginReq, request: Request):
+    if not auth.enabled():
+        return {"ok": True}
+    ok, msg = auth.check_password(req.password)
+    if not ok:
+        log.warning("로그인 실패")
+        raise HTTPException(401, msg)
+    res = JSONResponse({"ok": True})
+    res.set_cookie(auth.COOKIE, auth.make_cookie(), max_age=auth.SESSION_SECONDS, httponly=True,
+                   secure=auth.is_https(request), samesite="strict")
+    return res
+
+
+@app.post("/api/logout")
+async def logout():
+    res = JSONResponse({"ok": True})
+    res.delete_cookie(auth.COOKIE)
+    return res
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz():
+    return {"ok": True}
+
+
 @app.get("/api/status")
 async def status():
-    labels = {"prod": "실전투자", "vps": "모의투자", "demo": "DEMO (가상 시뮬레이션)"}
+    labels = {"prod": "실전투자", "vps": "모의투자", "demo": "DEMO (가상)"}
     return {"env": settings.env, "env_label": labels[settings.env],
-            "account": settings.masked_account, "stock_master_date": stock_master.as_of}
+            "account": settings.masked_account, "stock_master_date": stock_master.as_of,
+            "auth": auth.enabled()}
 
 
 # ---------------------------------------------------------------------- 시세
