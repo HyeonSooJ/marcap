@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KIS 주식 매매</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">▲<b>▼</b></span>
+    <span class="brand-name">KIS Trader</span>
+  </div>
+
+  <div class="search" role="search">
+    <input id="searchInput" type="search" placeholder="종목명 또는 코드 검색 (예: 삼성전자, 005930)"
+           autocomplete="off" aria-label="종목 검색" aria-controls="searchResults">
+    <ul id="searchResults" class="search-results" role="listbox" hidden></ul>
+  </div>
+
+  <div class="top-right">
+    <span id="modeBadge" class="badge">연결 중…</span>
+    <span id="accountLabel" class="muted small"></span>
+    <button id="themeToggle" class="icon-btn" title="테마 전환" aria-label="테마 전환"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.5a6.5 6.5 0 0 1 0 13z" fill="currentColor"/></svg></button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 좌측: 관심종목 / 거래량 상위 -->
+  <aside class="panel side">
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-side-tab="watch" role="tab">관심종목</button>
+      <button class="tab" data-side-tab="rank" role="tab">거래량 상위</button>
+    </div>
+    <ul id="watchList" class="stock-list"></ul>
+    <ul id="rankList" class="stock-list" hidden></ul>
+  </aside>
+
+  <!-- 가운데: 현재가 / 차트 / 계좌 -->
+  <section class="center">
+    <div class="panel quote">
+      <div class="quote-head">
+        <div>
+          <div class="quote-title">
+            <h1 id="qName">-</h1>
+            <span id="qCode" class="muted"></span>
+            <span id="qMarket" class="chip"></span>
+            <button id="watchToggle" class="star" title="관심종목 추가/삭제" aria-label="관심종목">☆</button>
+          </div>
+          <div class="quote-price">
+            <span id="qPrice" class="big">-</span>
+            <span id="qChange" class="change"></span>
+          </div>
+        </div>
+        <div class="quote-time muted small">
+          <span id="liveDot" class="live-dot"></span> <span id="qTime">-</span>
+        </div>
+      </div>
+      <dl class="stats" id="qStats"></dl>
+    </div>
+
+    <div class="panel chart-panel">
+      <div class="panel-head">
+        <h2>차트</h2>
+        <div class="seg" id="periodSeg">
+          <button data-period="D" class="active">일</button>
+          <button data-period="W">주</button>
+          <button data-period="M">월</button>
+          <button data-period="Y">년</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart"></canvas>
+        <div id="chartTip" class="chart-tip" hidden></div>
+      </div>
+    </div>
+
+    <div class="panel account">
+      <div class="panel-head">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-acc-tab="balance" role="tab">잔고</button>
+          <button class="tab" data-acc-tab="orders" role="tab">주문·체결</button>
+        </div>
+        <button id="refreshAccount" class="ghost small">새로고침</button>
+      </div>
+      <div id="balanceView">
+        <div class="summary" id="balanceSummary"></div>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr>
+              <th>종목</th><th class="r">보유</th><th class="r">매도가능</th><th class="r">평균단가</th>
+              <th class="r">현재가</th><th class="r">평가금액</th><th class="r">평가손익</th><th class="r">수익률</th>
+            </tr></thead>
+            <tbody id="holdingsBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div id="ordersView" hidden>
+        <div class="table-wrap">
+          <table class="grid">
+            <thead><tr>
+              <th>시각</th><th>종목</th><th>구분</th><th>유형</th><th class="r">주문가</th>
+              <th class="r">주문수량</th><th class="r">체결</th><th class="r">체결단가</th><th class="r">미체결</th><th>상태</th><th></th>
+            </tr></thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 우측: 호가 / 주문 -->
+  <aside class="right">
+    <div class="panel book">
+      <div class="panel-head"><h2>호가</h2><span id="bookTime" class="muted small"></span></div>
+      <table class="orderbook" id="orderbook"></table>
+    </div>
+
+    <div class="panel order">
+      <div class="order-tabs">
+        <button class="otab buy active" data-side="buy">매수</button>
+        <button class="otab sell" data-side="sell">매도</button>
+      </div>
+      <form id="orderForm" autocomplete="off">
+        <div class="field">
+          <label>주문유형</label>
+          <div class="seg full" id="ordTypeSeg">
+            <button type="button" data-type="00" class="active">지정가</button>
+            <button type="button" data-type="01">시장가</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="priceInput">가격</label>
+          <div class="stepper">
+            <button type="button" data-step="price" data-dir="-1" aria-label="가격 내리기">−</button>
+            <input id="priceInput" inputmode="numeric" value="">
+            <button type="button" data-step="price" data-dir="1" aria-label="가격 올리기">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label for="qtyInput">수량</label>
+          <div class="stepper">
+            <button type="button" data-step="qty" data-dir="-1" aria-label="수량 줄이기">−</button>
+            <input id="qtyInput" inputmode="numeric" value="1">
+            <button type="button" data-step="qty" data-dir="1" aria-label="수량 늘리기">+</button>
+          </div>
+          <div class="pct">
+            <button type="button" data-pct="10">10%</button>
+            <button type="button" data-pct="25">25%</button>
+            <button type="button" data-pct="50">50%</button>
+            <button type="button" data-pct="100">최대</button>
+          </div>
+        </div>
+        <dl class="order-info">
+          <div><dt id="availLabel">주문가능금액</dt><dd id="availValue">-</dd></div>
+          <div><dt id="maxLabel">최대 매수가능</dt><dd id="maxValue">-</dd></div>
+          <div class="total"><dt>주문금액</dt><dd id="totalValue">0원</dd></div>
+        </dl>
+        <button id="submitOrder" class="submit buy" type="submit">매수</button>
+      </form>
+    </div>
+  </aside>
+</main>
+
+<dialog id="modal">
+  <form method="dialog" class="modal-body">
+    <h3 id="modalTitle"></h3>
+    <div id="modalContent"></div>
+    <div class="modal-actions">
+      <button value="cancel" class="ghost">취소</button>
+      <button value="ok" id="modalOk" class="primary">확인</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
