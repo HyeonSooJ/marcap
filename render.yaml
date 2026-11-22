@@ -13,8 +13,9 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.7
+      # vps = 모의투자, prod = 실전투자. 대시보드 Environment 에서 바꾸면 그대로 유지됩니다.
       - key: KIS_ENV
-        value: vps
+        sync: false
       - key: REQUIRE_PASSWORD
         value: "1"
       - key: SESSION_SECRET

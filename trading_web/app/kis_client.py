@@ -93,7 +93,18 @@ class KisClient:
         self._last_call = 0.0
         # 모의투자는 초당 2건, 실전은 초당 20건 제한 → 여유있게 간격 유지
         self._min_interval = 0.55 if settings.env == "vps" else 0.06
-        self._http = httpx.AsyncClient(base_url=settings.domain, timeout=10.0)
+        self._http = httpx.AsyncClient(
+            base_url=settings.domain, timeout=10.0,
+            limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=60))
+        self._chart_cache: dict[tuple[str, str], tuple[float, list[dict]]] = {}
+
+    async def warmup(self) -> None:
+        """서버 시작 직후 접근토큰을 미리 받아 첫 조회/주문이 느려지지 않게 합니다."""
+        try:
+            await self._get_token()
+            log.info("접근토큰 준비 완료")
+        except Exception as e:  # 시작 실패로 이어지지 않게 로그만 남김
+            log.warning("접근토큰 사전 발급 실패: %s", e)
 
     async def close(self) -> None:
         await self._http.aclose()
@@ -150,7 +161,8 @@ class KisClient:
 
     async def _request(self, method: str, path: str, tr_id: str, *, params: dict | None = None,
                        body: dict | None = None, tr_cont: str = "",
-                       _retry: bool = False) -> tuple[dict, dict]:
+                       priority: bool = False, _retry: bool = False) -> tuple[dict, dict]:
+        """priority=True(주문·정정·취소)는 시세 조회 대기열을 기다리지 않고 바로 전송합니다."""
         token = await self._get_token()
         headers = {
             "content-type": "application/json; charset=utf-8",
@@ -161,11 +173,14 @@ class KisClient:
             "tr_cont": tr_cont,
             "custtype": self.s.custtype,
         }
-        async with self._rate_lock:
-            wait = self._min_interval - (time.monotonic() - self._last_call)
-            if wait > 0:
-                await asyncio.sleep(wait)
+        if priority:
             self._last_call = time.monotonic()
+        else:
+            async with self._rate_lock:
+                wait = self._min_interval - (time.monotonic() - self._last_call)
+                if wait > 0:
+                    await asyncio.sleep(wait)
+                self._last_call = time.monotonic()
         try:
             r = await self._http.request(method, path, headers=headers, params=params, json=body)
         except httpx.HTTPError as e:
@@ -179,7 +194,11 @@ class KisClient:
                 self._token = ""
                 self._token_file.unlink(missing_ok=True)
                 return await self._request(method, path, tr_id, params=params, body=body,
-                                           tr_cont=tr_cont, _retry=True)
+                                           tr_cont=tr_cont, priority=priority, _retry=True)
+            if data.get("msg_cd") == "EGW00201" and not _retry:  # 초당 거래건수 초과 → 잠시 후 1회 재시도
+                await asyncio.sleep(0.25)
+                return await self._request(method, path, tr_id, params=params, body=body,
+                                           tr_cont=tr_cont, priority=priority, _retry=True)
             raise KisError(data.get("msg1") or str(data), code=data.get("msg_cd", ""))
         return data, dict(r.headers)
 
@@ -240,6 +259,17 @@ class KisClient:
         }
 
     async def chart(self, code: str, period: str = "D") -> list[dict]:
+        # 과거 봉은 바뀌지 않으므로 잠깐 캐시 (오늘 봉은 화면에서 현재가로 갱신)
+        cached = self._chart_cache.get((code, period))
+        if cached and time.monotonic() - cached[0] < 120:
+            return cached[1]
+        rows = await self._chart(code, period)
+        if len(self._chart_cache) > 300:
+            self._chart_cache.clear()
+        self._chart_cache[(code, period)] = (time.monotonic(), rows)
+        return rows
+
+    async def _chart(self, code: str, period: str) -> list[dict]:
         end = now_kst()
         span = {"D": 150, "W": 7 * 100, "M": 31 * 100, "Y": 366 * 30}[period]
         data, _ = await self._request(
@@ -319,9 +349,19 @@ class KisClient:
                 qty = to_int(o.get("hldg_qty"))
                 if qty <= 0:
                     continue
+                trade = (o.get("trad_dvsn_name") or "현금").strip()
+                loan_dt = (o.get("loan_dt") or "").strip()
+                if not loan_dt.strip("0"):
+                    loan_dt = ""
+                # 신용(융자) 잔고는 대출일자별로 따로 내려오며, 매도 시 신용유형(상환)·대출일자가 필요
+                repay = ("27" if "유통" in trade else "25") if loan_dt and "융자" in trade else ""
                 holdings.append({
                     "code": o.get("pdno", ""),
                     "name": o.get("prdt_name", ""),
+                    "trade_type": trade,
+                    "loan_dt": loan_dt,
+                    "loan_amt": to_int(o.get("loan_amt")),
+                    "repay_type": repay,
                     "qty": qty,
                     "sellable_qty": to_int(o.get("ord_psbl_qty")),
                     "avg_price": to_float(o.get("pchs_avg_pric")),
@@ -348,29 +388,57 @@ class KisClient:
         summary["pnl_rate"] = round(summary.get("pnl", 0) / buy * 100, 2) if buy else 0.0
         return {"summary": summary, "holdings": holdings}
 
-    async def buyable(self, code: str, price: int, ord_dvsn: str) -> dict:
-        data, _ = await self._request(
-            "GET", "/uapi/domestic-stock/v1/trading/inquire-psbl-order", self._tr("TTTC8908R"),
-            params={**self._acct(), "PDNO": code, "ORD_UNPR": str(price if ord_dvsn == "00" else 0),
-                    "ORD_DVSN": ord_dvsn, "CMA_EVLU_AMT_ICLD_YN": "N", "OVRS_ICLD_YN": "N"})
+    def _require_prod(self, what: str) -> None:
+        if self.s.env != "prod":
+            raise KisError(f"{what}: 실전투자 계좌에서만 가능합니다 (모의투자 미지원).")
+
+    async def buyable(self, code: str, price: int, ord_dvsn: str, credit: str = "") -> dict:
+        """credit: '' 현금(미수 포함), '21' 자기융자신규, '23' 유통융자신규."""
+        params = {**self._acct(), "PDNO": code, "ORD_UNPR": str(price if ord_dvsn == "00" else 0),
+                  "ORD_DVSN": ord_dvsn, "CMA_EVLU_AMT_ICLD_YN": "N", "OVRS_ICLD_YN": "N"}
+        if credit:
+            self._require_prod("신용매수")
+            data, _ = await self._request(
+                "GET", "/uapi/domestic-stock/v1/trading/inquire-credit-psamount", "TTTC8909R",
+                params={**params, "CRDT_TYPE": credit})
+        else:
+            data, _ = await self._request(
+                "GET", "/uapi/domestic-stock/v1/trading/inquire-psbl-order", self._tr("TTTC8908R"),
+                params=params)
         o = data.get("output", {})
         return {
             "cash": to_int(o.get("ord_psbl_cash")),
             "max_qty": to_int(o.get("nrcvb_buy_qty")),  # 미수 없는 매수 수량
             "max_amount": to_int(o.get("nrcvb_buy_amt")),
+            "margin_max_qty": to_int(o.get("max_buy_qty")),  # 미수(또는 신용) 포함 최대 수량
+            "margin_max_amount": to_int(o.get("max_buy_amt")),
             "calc_price": to_int(o.get("psbl_qty_calc_unpr")),
         }
 
-    async def order(self, side: str, code: str, qty: int, price: int, ord_dvsn: str) -> dict:
-        tr_id = self._tr("TTTC0012U" if side == "buy" else "TTTC0011U")
-        body = {**self._acct(), "PDNO": code, "ORD_DVSN": ord_dvsn, "ORD_QTY": str(qty),
-                "ORD_UNPR": str(price if ord_dvsn == "00" else 0), "EXCG_ID_DVSN_CD": "KRX"}
-        if side == "sell":
-            body["SLL_TYPE"] = "01"
-        data, _ = await self._request("POST", "/uapi/domestic-stock/v1/trading/order-cash", tr_id, body=body)
+    async def order(self, side: str, code: str, qty: int, price: int, ord_dvsn: str,
+                    credit: str = "", loan_dt: str = "") -> dict:
+        """credit: '' 현금주문(미수 매수 포함) / 매수 '21' 자기융자신규 '23' 유통융자신규
+        / 매도 '25' 자기융자상환 '27' 유통융자상환 (loan_dt = 상환할 잔고의 대출일자)."""
+        unpr = str(price if ord_dvsn == "00" else 0)
+        if credit:
+            self._require_prod("신용주문")
+            body = {**self._acct(), "PDNO": code, "SLL_TYPE": "", "CRDT_TYPE": credit,
+                    "LOAN_DT": now_kst().strftime("%Y%m%d") if side == "buy" else loan_dt,
+                    "ORD_DVSN": ord_dvsn, "ORD_QTY": str(qty), "ORD_UNPR": unpr,
+                    "RSVN_ORD_YN": "N", "EXCG_ID_DVSN_CD": "KRX"}
+            tr_id, path = ("TTTC0052U" if side == "buy" else "TTTC0051U"), "order-credit"
+        else:
+            body = {**self._acct(), "PDNO": code, "ORD_DVSN": ord_dvsn, "ORD_QTY": str(qty),
+                    "ORD_UNPR": unpr, "EXCG_ID_DVSN_CD": "KRX"}
+            if side == "sell":
+                body["SLL_TYPE"] = "01"
+            tr_id, path = self._tr("TTTC0012U" if side == "buy" else "TTTC0011U"), "order-cash"
+        data, _ = await self._request("POST", f"/uapi/domestic-stock/v1/trading/{path}", tr_id,
+                                      body=body, priority=True)
         o = data.get("output", {})
-        return {"order_no": o.get("ODNO", ""), "org_no": o.get("KRX_FWDG_ORD_ORGNO", ""),
-                "time": o.get("ORD_TMD", ""), "message": data.get("msg1", "")}
+        return {"order_no": o.get("ODNO") or o.get("odno", ""),
+                "org_no": o.get("KRX_FWDG_ORD_ORGNO") or o.get("krx_fwdg_ord_orgno", ""),
+                "time": o.get("ORD_TMD") or o.get("ord_tmd", ""), "message": data.get("msg1", "")}
 
     async def orders(self) -> list[dict]:
         today = now_kst().strftime("%Y%m%d")
@@ -424,6 +492,7 @@ class KisClient:
                 "ORD_QTY": "0", "ORD_UNPR": str(price if action == "amend" else 0),
                 "QTY_ALL_ORD_YN": "Y", "EXCG_ID_DVSN_CD": "KRX"}
         data, _ = await self._request(
-            "POST", "/uapi/domestic-stock/v1/trading/order-rvsecncl", self._tr("TTTC0013U"), body=body)
+            "POST", "/uapi/domestic-stock/v1/trading/order-rvsecncl", self._tr("TTTC0013U"), body=body,
+            priority=True)
         o = data.get("output", {})
         return {"order_no": o.get("odno") or o.get("ODNO", ""), "message": data.get("msg1", "")}

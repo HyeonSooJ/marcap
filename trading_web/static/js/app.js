@@ -92,6 +92,10 @@
       b.className = `badge ${s.env}`;
       $("#accountLabel").textContent = `계좌 ${s.account}`;
       $("#logoutBtn").hidden = !s.auth;
+      state.pollMs = s.poll_ms || 3000;
+      state.fastApi = s.env !== "vps"; // 모의투자는 초당 2건 제한이라 미리 불러오기 생략
+      $("#acctTypeField").hidden = !s.credit;
+      if (!s.credit && state.acct === "credit") setAcct("cash");
       if (s.env === "demo") toast("API 키가 없어 DEMO 모드로 실행 중입니다. 시세·주문은 가상입니다.");
       if (s.env === "prod") toast("실전투자 계좌에 연결되었습니다. 주문은 실제로 체결됩니다.", "error");
     } catch (e) {
@@ -119,11 +123,12 @@
         const items = await api(`/api/stocks/search?q=${encodeURIComponent(q)}`);
         searchIdx = items.length ? 0 : -1;
         searchResults.innerHTML = items.length
-          ? items.map((s, i) => `<li role="option" data-code="${esc(s.code)}" class="${i === 0 ? "active" : ""}">
+          ? items.map((s, i) => `<li role="option" data-code="${esc(s.code)}" data-name="${esc(s.name)}" class="${i === 0 ? "active" : ""}">
               <span><b>${esc(s.name)}</b> <span class="muted small">${esc(s.code)}</span></span>
               <span class="muted small">${esc(s.market)}</span></li>`).join("")
           : `<li class="muted">검색 결과가 없습니다. 6자리 코드를 입력 후 Enter</li>`;
         searchResults.hidden = false;
+        if (items[0]) prefetchChart(items[0].code);
       } catch (e) { toast(e.message, "error"); }
     }, 150);
   });
@@ -135,42 +140,48 @@
       searchIdx = (searchIdx + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
       items.forEach((li, i) => li.classList.toggle("active", i === searchIdx));
       items[searchIdx].scrollIntoView({ block: "nearest" });
+      prefetchChart(items[searchIdx].dataset.code);
     } else if (e.key === "Enter") {
       e.preventDefault();
       const q = searchInput.value.trim().toUpperCase();
-      if (items[searchIdx]) pickSearch(items[searchIdx].dataset.code);
+      if (items[searchIdx]) pickSearch(items[searchIdx].dataset.code, items[searchIdx].dataset.name);
       else if (/^[0-9A-Z]{6}$/.test(q)) pickSearch(q);
     } else if (e.key === "Escape") {
       searchResults.hidden = true;
     }
   });
+  searchResults.addEventListener("pointerover", (e) => {
+    const li = e.target.closest("li[data-code]");
+    if (li) prefetchChart(li.dataset.code);
+  });
   searchResults.addEventListener("mousedown", (e) => {
     const li = e.target.closest("li[data-code]");
-    if (li) { e.preventDefault(); pickSearch(li.dataset.code); }
+    if (li) { e.preventDefault(); pickSearch(li.dataset.code, li.dataset.name); }
   });
   searchInput.addEventListener("blur", () => setTimeout(() => (searchResults.hidden = true), 100));
-  function pickSearch(code) {
+  function pickSearch(code, name = "") {
     searchResults.hidden = true;
     searchInput.value = "";
     searchInput.blur();
-    selectStock(code);
+    selectStock(code, name);
   }
 
   // ------------------------------------------------------------------ 종목 선택
-  async function selectStock(code) {
+  function selectStock(code, name = "") {
     state.code = code;
     state.quote = null;
     state.book = null;
     state.priceTouched = false;
     store.set("lastCode", code);
-    $("#qName").textContent = "불러오는 중…";
+    $("#qName").textContent = name || (state.watchQuotes[code] && state.watchQuotes[code].name) || "불러오는 중…";
     $("#qCode").textContent = code;
     $("#priceInput").value = "";
     $("#qtyInput").value = "1";
     renderWatch();
-    await refreshQuote(true);
+    // 시세·호가·차트를 동시에 요청하고, 먼저 도착한 것부터 바로 그립니다
     loadChart();
-    refreshBuyable();
+    refreshQuote(true).then(() => refreshBuyable());
+    updateCreditLots();
   }
 
   // ------------------------------------------------------------------ 현재가
@@ -178,19 +189,22 @@
   async function refreshQuote(first = false) {
     const code = state.code;
     try {
-      const [q, book] = await Promise.all([api(`/api/quote/${code}`), api(`/api/orderbook/${code}`)]);
-      if (code !== state.code) return; // 그 사이 종목이 바뀜
-      state.quote = q;
-      state.book = book;
-      renderQuote(q, first);
-      renderBook(book);
-      if (!state.priceTouched || !$("#priceInput").value) {
-        $("#priceInput").value = fmt(q.price);
-      }
-      updateTotal();
-      state.watchQuotes[code] = { price: q.price, rate: q.change_rate, sign: q.sign, name: q.name };
-      renderWatch();
-      updateLastCandle(q);
+      const pq = api(`/api/quote/${code}`).then((q) => {
+        if (code !== state.code) return; // 그 사이 종목이 바뀜
+        state.quote = q;
+        renderQuote(q, first);
+        fillDefaultPrice();
+        state.watchQuotes[code] = { price: q.price, rate: q.change_rate, sign: q.sign, name: q.name };
+        renderWatch();
+        updateLastCandle(q);
+      });
+      const pb = api(`/api/orderbook/${code}`).then((book) => {
+        if (code !== state.code) return;
+        state.book = book;
+        renderBook(book);
+        fillDefaultPrice();
+      });
+      await Promise.all([pq, pb]);
       $("#liveDot").classList.add("on");
     } catch (e) {
       $("#liveDot").classList.remove("on");
@@ -234,6 +248,21 @@
     document.title = `${q.name} ${fmt(q.price)} (${fmtRate(q.sign < 0 ? -Math.abs(q.change_rate) : q.change_rate)}) - KIS Trader`;
   }
 
+  // 즉시 체결되는 가격: 매수는 최우선 매도호가, 매도는 최우선 매수호가
+  function instantPrice() {
+    const b = state.book;
+    const p = b && (state.side === "buy" ? b.asks[0] && b.asks[0].price : b.bids[0] && b.bids[0].price);
+    return p || (state.quote ? state.quote.price : 0);
+  }
+  function fillDefaultPrice(force = false) {
+    if (state.ordType !== "00") { updateTotal(); return; }
+    if (force || !state.priceTouched || !$("#priceInput").value) {
+      const p = instantPrice();
+      if (p) $("#priceInput").value = fmt(p);
+    }
+    updateTotal();
+  }
+
   // ------------------------------------------------------------------ 호가
   function renderBook(b) {
     const maxQ = Math.max(1, ...b.asks.map((a) => a.qty), ...b.bids.map((x) => x.qty));
@@ -269,12 +298,31 @@
   const tip = $("#chartTip");
   let chartGeom = null;
 
+  const chartCache = new Map(); // "코드:기간" → {t, rows}
+  const prefetching = new Set();
+  let chartLoading = false;
+  function prefetchChart(code) {
+    const key = `${code}:${state.period}`;
+    if (!state.fastApi || chartCache.has(key) || prefetching.has(key)) return;
+    prefetching.add(key);
+    api(`/api/chart/${code}?period=${state.period}`)
+      .then((rows) => chartCache.set(key, { t: Date.now(), rows }))
+      .catch(() => {})
+      .finally(() => prefetching.delete(key));
+  }
   async function loadChart() {
-    const code = state.code;
+    const code = state.code, period = state.period, key = `${code}:${period}`;
+    const hit = chartCache.get(key);
+    if (hit) { state.chart = hit.rows.map((r) => ({ ...r })); drawChart(); }
+    else { state.chart = []; chartLoading = true; drawChart(); }
+    if (hit && Date.now() - hit.t < 60000) return;
     try {
-      const rows = await api(`/api/chart/${code}?period=${state.period}`);
-      if (code !== state.code) return;
-      state.chart = rows;
+      const rows = await api(`/api/chart/${code}?period=${period}`);
+      chartLoading = false;
+      chartCache.set(key, { t: Date.now(), rows });
+      if (code !== state.code || period !== state.period) return;
+      state.chart = rows.map((r) => ({ ...r }));
+      if (state.quote) updateLastCandle(state.quote, false);
       drawChart();
     } catch (e) {
       state.chart = [];
@@ -290,7 +338,7 @@
     loadChart();
   });
 
-  function updateLastCandle(q) {
+  function updateLastCandle(q, redraw = true) {
     if (state.period !== "D" || !state.chart.length) return;
     const last = state.chart[state.chart.length - 1];
     const today = new Date();
@@ -300,7 +348,7 @@
       last.high = Math.max(last.high, q.price);
       last.low = Math.min(last.low, q.price);
       last.volume = q.volume || last.volume;
-      drawChart();
+      if (redraw) drawChart();
     }
   }
 
@@ -330,7 +378,7 @@
     ctx.font = "11px system-ui, sans-serif";
     if (!rows.length) {
       ctx.fillStyle = C.muted; ctx.textAlign = "center";
-      ctx.fillText("차트 데이터가 없습니다", W / 2, H / 2);
+      ctx.fillText(chartLoading ? "차트 불러오는 중…" : "차트 데이터가 없습니다", W / 2, H / 2);
       chartGeom = null;
       return;
     }
@@ -503,43 +551,99 @@
 
   // ------------------------------------------------------------------ 주문 폼
   const priceInput = $("#priceInput"), qtyInput = $("#qtyInput");
+  state.acct = "cash";            // cash(현금·미수) | credit(신용)
+  state.skipConfirm = store.get("skipConfirm", false);
+  $("#skipConfirm").checked = state.skipConfirm;
+
+  const ORD_TYPE_LABEL = { "00": "지정가", "01": "시장가", "03": "최유리지정가" };
+  const CREDIT_LABEL = { "21": "자기융자 신규", "23": "유통융자 신규", "25": "자기융자 상환", "27": "유통융자 상환" };
+
+  // 현재 종목의 잔고 행: 현금 잔고 / 신용(융자) 잔고(대출일별)
+  const cashRows = () => state.holdings.filter((h) => h.code === state.code && !h.repay_type);
+  const creditRows = () => state.holdings.filter((h) => h.code === state.code && h.repay_type);
+  const fmtDate = (d) => (d && d.length === 8 ? `${d.slice(0, 4)}.${d.slice(4, 6)}.${d.slice(6)}` : d || "");
+
+  function updateCreditLots(selectKey) {
+    const sel = $("#creditLot");
+    const rows = creditRows();
+    sel.innerHTML = rows.length
+      ? rows.map((h) => `<option value="${esc(h.repay_type)}|${esc(h.loan_dt)}">${esc(h.trade_type)} · 대출일 ${fmtDate(h.loan_dt)} · ${fmt(h.sellable_qty)}주</option>`).join("")
+      : `<option value="">상환할 신용잔고가 없습니다</option>`;
+    if (selectKey) sel.value = selectKey;
+  }
+  function selectedLot() {
+    const [repay, loanDt] = ($("#creditLot").value || "").split("|");
+    return creditRows().find((h) => h.repay_type === repay && h.loan_dt === loanDt) || null;
+  }
+
+  function syncOrderUi() {
+    const credit = state.acct === "credit";
+    $$("#acctTypeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.acct === state.acct));
+    $("#creditBuyType").hidden = !(credit && state.side === "buy");
+    $("#creditLot").hidden = !(credit && state.side === "sell");
+    $("#marginRow").hidden = credit || state.side !== "buy";
+    const btn = $("#submitOrder");
+    btn.className = `submit ${state.side}`;
+    btn.textContent = (credit ? "신용" : "") + (state.side === "buy" ? "매수" : credit ? "상환매도" : "매도");
+  }
 
   function setSide(side) {
     state.side = side;
     $$(".otab").forEach((b) => b.classList.toggle("active", b.dataset.side === side));
-    const btn = $("#submitOrder");
-    btn.className = `submit ${side}`;
-    btn.textContent = side === "buy" ? "매수" : "매도";
+    syncOrderUi();
+    fillDefaultPrice(!state.priceTouched);
+    refreshBuyable();
+  }
+  function setAcct(acct) {
+    state.acct = acct;
+    syncOrderUi();
     refreshBuyable();
   }
   function setOrdType(t) {
     state.ordType = t;
     $$("#ordTypeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.type === t));
-    priceInput.disabled = t === "01";
-    $$('[data-step="price"]').forEach((b) => (b.disabled = t === "01"));
-    if (t === "01") priceInput.value = "시장가";
-    else if (state.quote) priceInput.value = fmt(state.quote.price);
+    const noPrice = t !== "00";
+    priceInput.disabled = noPrice;
+    $$('[data-step="price"]').forEach((b) => (b.disabled = noPrice));
+    if (noPrice) priceInput.value = ORD_TYPE_LABEL[t];
+    else fillDefaultPrice(true);
     updateTotal();
   }
   $$(".otab").forEach((b) => b.addEventListener("click", () => setSide(b.dataset.side)));
+  $("#acctTypeSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-acct]");
+    if (b) setAcct(b.dataset.acct);
+  });
   $("#ordTypeSeg").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-type]");
     if (b) { setOrdType(b.dataset.type); refreshBuyable(); }
   });
+  $("#creditBuyType").addEventListener("change", () => refreshBuyable());
+  $("#creditLot").addEventListener("change", () => refreshBuyable());
+  $("#allowMargin").addEventListener("change", () => refreshBuyable());
+  $("#skipConfirm").addEventListener("change", async (e) => {
+    if (e.target.checked) {
+      const ok = await confirmModal("확인창 생략", `<p>앞으로 매수·매도 버튼을 누르면 <b>확인 없이 바로 주문</b>이 전송됩니다.</p>
+        <p class="warn">실전 계좌에서는 잘못 누른 주문도 그대로 체결될 수 있습니다.</p>`, "사용하기");
+      if (!ok) { e.target.checked = false; return; }
+    }
+    state.skipConfirm = e.target.checked;
+    store.set("skipConfirm", state.skipConfirm);
+  });
 
   function curPrice() {
-    if (state.ordType === "01") return state.quote ? state.quote.price : 0;
+    if (state.ordType !== "00") return instantPrice();
     return toNum(priceInput.value);
   }
   function updateTotal() {
     const total = curPrice() * toNum(qtyInput.value);
-    $("#totalValue").textContent = `${fmt(total)}원${state.ordType === "01" ? " (예상)" : ""}`;
+    $("#totalValue").textContent = `${fmt(total)}원${state.ordType !== "00" ? " (예상)" : ""}`;
   }
 
   $$("[data-step]").forEach((b) => b.addEventListener("click", () => {
     const dir = Number(b.dataset.dir);
     if (b.dataset.step === "price") {
-      let p = toNum(priceInput.value) || (state.quote ? state.quote.price : 0);
+      let p = toNum(priceInput.value) || instantPrice();
       p = dir > 0 ? p + tickSize(p) : p - tickSize(p - 1);
       if (state.quote) p = Math.min(state.quote.upper || p, Math.max(state.quote.lower || p, p));
       priceInput.value = fmt(Math.max(1, p));
@@ -549,6 +653,12 @@
     }
     updateTotal();
   }));
+  $("#instantPrice").addEventListener("click", () => {
+    setOrdType("00");
+    state.priceTouched = false;
+    fillDefaultPrice(true);
+    refreshBuyable();
+  });
   priceInput.addEventListener("input", () => {
     state.priceTouched = true;
     const n = toNum(priceInput.value);
@@ -567,52 +677,67 @@
     updateTotal();
   });
 
+  // 현재 설정 기준 최대 주문 가능 수량
+  function maxOrderQty() {
+    if (state.side === "buy") {
+      const b = state.buyable;
+      if (!b) return 0;
+      if (state.acct === "credit" || $("#allowMargin").checked) return b.margin_max_qty || b.max_qty;
+      return b.max_qty;
+    }
+    if (state.acct === "credit") { const lot = selectedLot(); return lot ? lot.sellable_qty : 0; }
+    return cashRows().reduce((a, h) => a + h.sellable_qty, 0);
+  }
+
   $$("[data-pct]").forEach((b) => b.addEventListener("click", async () => {
     const pct = Number(b.dataset.pct) / 100;
-    let max = 0;
-    if (state.side === "buy") {
-      await refreshBuyable();
-      max = state.buyable ? state.buyable.max_qty : 0;
-    } else {
-      const h = state.holdings.find((x) => x.code === state.code);
-      max = h ? h.sellable_qty : 0;
-    }
+    if (state.side === "buy") await refreshBuyable(true);
+    const max = maxOrderQty();
     qtyInput.value = fmt(Math.max(pct === 1 ? max : Math.floor(max * pct), 0));
     updateTotal();
   }));
 
   let buyableTimer = null;
-  function refreshBuyable() {
+  function refreshBuyable(now = false) {
     clearTimeout(buyableTimer);
     return new Promise((resolve) => {
       buyableTimer = setTimeout(async () => {
         const code = state.code;
+        const credit = state.acct === "credit";
         if (state.side === "buy") {
-          $("#availLabel").textContent = "주문가능금액";
-          $("#maxLabel").textContent = "최대 매수가능";
+          const margin = !credit && $("#allowMargin").checked;
+          $("#availLabel").textContent = "주문가능현금";
+          $("#maxLabel").textContent = credit ? "신용 최대 매수" : margin ? "미수 포함 최대" : "최대 매수가능";
           const price = curPrice();
-          if (state.ordType === "00" && !price) { resolve(); return; }
+          if (!price) { resolve(); return; }
+          const ct = credit ? $("#creditBuyType").value : "";
           try {
-            const r = await api(`/api/buyable/${code}?price=${price}&ord_dvsn=${state.ordType}`);
+            const r = await api(`/api/buyable/${code}?price=${price}&ord_dvsn=${state.ordType}&credit=${ct}`);
             if (code !== state.code) return resolve();
             state.buyable = r;
             $("#availValue").textContent = `${fmt(r.cash)}원`;
-            $("#maxValue").textContent = `${fmt(r.max_qty)}주`;
+            $("#maxValue").textContent = `${fmt(maxOrderQty())}주`;
           } catch (e) {
             state.buyable = null;
             $("#availValue").textContent = "-";
-            $("#maxValue").textContent = "-";
+            $("#maxValue").textContent = credit ? e.message : "-";
           }
         } else {
-          $("#availLabel").textContent = "보유수량";
-          $("#maxLabel").textContent = "매도가능수량";
           if (!state.holdings.length) await loadBalance(true);
-          const h = state.holdings.find((x) => x.code === state.code);
-          $("#availValue").textContent = `${fmt(h ? h.qty : 0)}주`;
-          $("#maxValue").textContent = `${fmt(h ? h.sellable_qty : 0)}주`;
+          if (credit) {
+            const lot = selectedLot();
+            $("#availLabel").textContent = "선택 신용잔고";
+            $("#maxLabel").textContent = "상환 가능수량";
+            $("#availValue").textContent = lot ? `${fmt(lot.qty)}주 (대출 ${fmt(lot.loan_amt)}원)` : "없음";
+          } else {
+            $("#availLabel").textContent = "현금 보유수량";
+            $("#maxLabel").textContent = "매도가능수량";
+            $("#availValue").textContent = `${fmt(cashRows().reduce((a, h) => a + h.qty, 0))}주`;
+          }
+          $("#maxValue").textContent = `${fmt(maxOrderQty())}주`;
         }
         resolve();
-      }, 200);
+      }, now ? 0 : 150);
     });
   }
 
@@ -639,6 +764,7 @@
     if (!q) { toast("시세를 불러온 후 주문하세요.", "error"); return; }
     const qty = toNum(qtyInput.value);
     const price = state.ordType === "00" ? toNum(priceInput.value) : 0;
+    const credit = state.acct === "credit";
     if (qty <= 0) { toast("수량을 입력하세요.", "error"); return; }
     if (state.ordType === "00") {
       if (!price) { toast("가격을 입력하세요.", "error"); return; }
@@ -647,26 +773,52 @@
         toast(`가격제한폭(${fmt(q.lower)} ~ ${fmt(q.upper)}) 밖의 가격입니다.`, "error"); return;
       }
     }
-    const sideLabel = state.side === "buy" ? "매수" : "매도";
-    const env = $("#modeBadge").textContent;
-    const ok = await confirmModal(`${sideLabel} 주문 확인`, `
-      <dl>
-        <dt>종목</dt><dd>${esc(q.name)} (${esc(q.code)})</dd>
-        <dt>구분</dt><dd class="${state.side === "buy" ? "up" : "down"}">${sideLabel}</dd>
-        <dt>주문유형</dt><dd>${state.ordType === "00" ? "지정가" : "시장가"}</dd>
-        <dt>가격</dt><dd>${state.ordType === "00" ? `${fmt(price)}원` : "시장가"}</dd>
-        <dt>수량</dt><dd>${fmt(qty)}주</dd>
-        <dt>주문금액</dt><dd>${fmt((price || q.price) * qty)}원${state.ordType === "01" ? " (예상)" : ""}</dd>
-      </dl>
-      <p class="warn">[${esc(env)}] 확인을 누르면 주문이 전송됩니다.</p>`, `${sideLabel} 주문`, state.side);
-    if (!ok) return;
+    let creditCode = "", loanDt = "";
+    if (credit) {
+      if (state.side === "buy") creditCode = $("#creditBuyType").value;
+      else {
+        const lot = selectedLot();
+        if (!lot) { toast("상환할 신용잔고를 선택하세요.", "error"); return; }
+        creditCode = lot.repay_type; loanDt = lot.loan_dt;
+      }
+    }
+    // 미수 매수 판단 (현금 매수에서 미수 없는 수량을 넘는 경우)
+    const nrcv = state.buyable ? state.buyable.max_qty : null;
+    const isMargin = !credit && state.side === "buy" && nrcv !== null && qty > nrcv;
+    if (isMargin && !$("#allowMargin").checked) {
+      toast(`현금으로 살 수 있는 수량(${fmt(nrcv)}주)을 넘습니다. 미수 매수하려면 '미수 허용'을 체크하세요.`, "error");
+      return;
+    }
+
+    const sideLabel = (credit ? "신용" : "") + (state.side === "buy" ? "매수" : credit ? "상환매도" : "매도");
+    if (!state.skipConfirm || isMargin) {
+      const env = $("#modeBadge").textContent;
+      const ok = await confirmModal(`${sideLabel} 주문 확인`, `
+        <dl>
+          <dt>종목</dt><dd>${esc(q.name)} (${esc(q.code)})</dd>
+          <dt>구분</dt><dd class="${state.side === "buy" ? "up" : "down"}">${sideLabel}</dd>
+          ${credit ? `<dt>신용유형</dt><dd>${CREDIT_LABEL[creditCode]}${loanDt ? ` (${fmtDate(loanDt)})` : ""}</dd>` : ""}
+          <dt>주문유형</dt><dd>${ORD_TYPE_LABEL[state.ordType]}</dd>
+          <dt>가격</dt><dd>${state.ordType === "00" ? `${fmt(price)}원` : ORD_TYPE_LABEL[state.ordType]}</dd>
+          <dt>수량</dt><dd>${fmt(qty)}주</dd>
+          <dt>주문금액</dt><dd>${fmt((price || instantPrice()) * qty)}원${state.ordType !== "00" ? " (예상)" : ""}</dd>
+        </dl>
+        ${isMargin ? `<p class="warn danger">미수 매수입니다 (현금 가능 ${fmt(nrcv)}주 초과). 결제일(D+2)까지 부족 금액을 입금하지 않으면 반대매매될 수 있습니다.</p>` : ""}
+        ${credit && state.side === "buy" ? `<p class="warn danger">신용(융자) 매수입니다. 이자가 발생하고 담보비율 미달 시 반대매매될 수 있습니다.</p>` : ""}
+        <p class="warn">[${esc(env)}] 확인을 누르면 주문이 전송됩니다.</p>`, `${sideLabel} 주문`, state.side);
+      if (!ok) return;
+    }
 
     const btn = $("#submitOrder");
     btn.disabled = true;
+    const t0 = performance.now();
     try {
-      const r = await api("/api/order", { method: "POST", body: { side: state.side, code: q.code, qty, price, ord_dvsn: state.ordType } });
-      toast(`${sideLabel} 주문 접수 · 주문번호 ${r.order_no} ${r.message ? `· ${r.message}` : ""}`, "ok");
-      setTimeout(() => { loadBalance(); loadOrders(); refreshBuyable(); }, 600);
+      const r = await api("/api/order", { method: "POST", body: {
+        side: state.side, code: q.code, qty, price, ord_dvsn: state.ordType, credit: creditCode, loan_dt: loanDt } });
+      const ms = Math.round(performance.now() - t0);
+      toast(`${sideLabel} 주문 접수 (${ms}ms) · 주문번호 ${r.order_no}${r.message ? ` · ${r.message}` : ""}`, "ok");
+      loadOrders();
+      setTimeout(() => { loadBalance(true); loadOrders(); refreshBuyable(); }, 1200);
     } catch (err) {
       toast(`주문 실패: ${err.message}`, "error");
     } finally {
@@ -689,18 +841,21 @@
         card("평가손익", `${s.pnl > 0 ? "+" : ""}${fmt(s.pnl)}원`, signCls(s.pnl)) +
         card("수익률", fmtRate(s.pnl_rate), signCls(s.pnl_rate));
       $("#holdingsBody").innerHTML = b.holdings.length ? b.holdings.map((h) => `
-        <tr class="link" data-code="${esc(h.code)}">
+        <tr class="link" data-code="${esc(h.code)}" data-lot="${h.repay_type ? `${esc(h.repay_type)}|${esc(h.loan_dt)}` : ""}">
           <td><b>${esc(h.name)}</b> <span class="muted small">${esc(h.code)}</span></td>
+          <td>${h.repay_type ? `<span class="tag credit">${esc(h.trade_type)}</span> <span class="muted small">${fmtDate(h.loan_dt)}</span>` : `<span class="muted small">${esc(h.trade_type || "현금")}</span>`}</td>
           <td class="r">${fmt(h.qty)}</td><td class="r">${fmt(h.sellable_qty)}</td>
           <td class="r">${fmt(h.avg_price)}</td><td class="r">${fmt(h.price)}</td>
           <td class="r">${fmt(h.eval_amount)}</td>
           <td class="r ${signCls(h.pnl)}">${h.pnl > 0 ? "+" : ""}${fmt(h.pnl)}</td>
           <td class="r ${signCls(h.pnl_rate)}">${fmtRate(h.pnl_rate)}</td>
-        </tr>`).join("") : `<tr><td colspan="8" class="empty">보유 종목이 없습니다</td></tr>`;
+        </tr>`).join("") : `<tr><td colspan="9" class="empty">보유 종목이 없습니다</td></tr>`;
+      const keep = $("#creditLot").value;
+      updateCreditLots(keep);
       if (state.side === "sell") refreshBuyable();
     } catch (e) {
       if (!silent) toast(`잔고 조회 실패: ${e.message}`, "error");
-      $("#holdingsBody").innerHTML = `<tr><td colspan="8" class="empty">${esc(e.message)}</td></tr>`;
+      $("#holdingsBody").innerHTML = `<tr><td colspan="9" class="empty">${esc(e.message)}</td></tr>`;
     }
   }
 
@@ -714,7 +869,7 @@
           <td class="link" data-code="${esc(o.code)}"><b>${esc(o.name)}</b></td>
           <td><span class="tag ${o.side}">${o.side === "buy" ? "매수" : "매도"}</span></td>
           <td>${esc(o.type)}</td>
-          <td class="r">${o.price ? fmt(o.price) : "시장가"}</td>
+          <td class="r">${o.price ? fmt(o.price) : "-"}</td>
           <td class="r">${fmt(o.qty)}</td><td class="r">${fmt(o.filled_qty)}</td>
           <td class="r">${o.avg_price ? fmt(o.avg_price) : "-"}</td><td class="r">${fmt(o.remain_qty)}</td>
           <td>${status}</td>
@@ -757,7 +912,11 @@
   });
   $("#holdingsBody").addEventListener("click", (e) => {
     const tr = e.target.closest("tr[data-code]");
-    if (tr) { selectStock(tr.dataset.code); setSide("sell"); }
+    if (!tr) return;
+    selectStock(tr.dataset.code);
+    setSide("sell");
+    if (tr.dataset.lot) { setAcct("credit"); updateCreditLots(tr.dataset.lot); refreshBuyable(); }
+    else setAcct("cash");
   });
 
   $$("[data-acc-tab]").forEach((b) => b.addEventListener("click", () => {
@@ -770,12 +929,13 @@
   $("#refreshAccount").addEventListener("click", () => (state.accTab === "balance" ? loadBalance() : loadOrders()));
 
   // ------------------------------------------------------------------ 폴링
-  let polling = false;
-  setInterval(async () => {
-    if (document.hidden || polling) return;
-    polling = true;
-    try { await refreshQuote(); } finally { polling = false; }
-  }, 3000);
+  state.pollMs = 3000;
+  (async function pollLoop() {
+    // 실전: 1초, 모의: 3초 (모의투자 초당 2건 제한)
+    if (!document.hidden) { try { await refreshQuote(); } catch { /* 다음 주기에 재시도 */ } }
+    setTimeout(pollLoop, state.pollMs);
+  })();
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshQuote(); });
   setInterval(() => {
     if (document.hidden) return;
     state.accTab === "balance" ? loadBalance(true) : loadOrders();
@@ -785,6 +945,7 @@
   // ------------------------------------------------------------------ 시작
   loadStatus();
   renderWatch();
+  syncOrderUi();
   selectStock(state.code);
   loadBalance(true);
   setTimeout(refreshWatchQuotes, 1500);

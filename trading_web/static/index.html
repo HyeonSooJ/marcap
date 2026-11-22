@@ -92,7 +92,7 @@
         <div class="table-wrap">
           <table class="grid">
             <thead><tr>
-              <th>종목</th><th class="r">보유</th><th class="r">매도가능</th><th class="r">평균단가</th>
+              <th>종목</th><th>구분</th><th class="r">보유</th><th class="r">매도가능</th><th class="r">평균단가</th>
               <th class="r">현재가</th><th class="r">평가금액</th><th class="r">평가손익</th><th class="r">수익률</th>
             </tr></thead>
             <tbody id="holdingsBody"></tbody>
@@ -126,15 +126,28 @@
         <button class="otab sell" data-side="sell">매도</button>
       </div>
       <form id="orderForm" autocomplete="off">
+        <div class="field" id="acctTypeField" hidden>
+          <label>거래구분</label>
+          <div class="seg full" id="acctTypeSeg">
+            <button type="button" data-acct="cash" class="active">현금·미수</button>
+            <button type="button" data-acct="credit">신용</button>
+          </div>
+          <select id="creditBuyType" class="select" hidden aria-label="신용 매수 유형">
+            <option value="21">자기융자 (한국투자 신용)</option>
+            <option value="23">유통융자 (증권금융)</option>
+          </select>
+          <select id="creditLot" class="select" hidden aria-label="상환할 신용잔고"></select>
+        </div>
         <div class="field">
           <label>주문유형</label>
           <div class="seg full" id="ordTypeSeg">
             <button type="button" data-type="00" class="active">지정가</button>
             <button type="button" data-type="01">시장가</button>
+            <button type="button" data-type="03">최유리</button>
           </div>
         </div>
         <div class="field">
-          <label for="priceInput">가격</label>
+          <label for="priceInput">가격 <button type="button" id="instantPrice" class="link-btn">즉시체결가</button></label>
           <div class="stepper">
             <button type="button" data-step="price" data-dir="-1" aria-label="가격 내리기">−</button>
             <input id="priceInput" inputmode="numeric" value="">
@@ -154,6 +167,7 @@
             <button type="button" data-pct="50">50%</button>
             <button type="button" data-pct="100">최대</button>
           </div>
+          <label class="check" id="marginRow"><input type="checkbox" id="allowMargin"> 미수 허용 (증거금 내에서 외상 매수)</label>
         </div>
         <dl class="order-info">
           <div><dt id="availLabel">주문가능금액</dt><dd id="availValue">-</dd></div>
@@ -161,6 +175,7 @@
           <div class="total"><dt>주문금액</dt><dd id="totalValue">0원</dd></div>
         </dl>
         <button id="submitOrder" class="submit buy" type="submit">매수</button>
+        <label class="check small"><input type="checkbox" id="skipConfirm"> 확인창 없이 바로 주문</label>
       </form>
     </div>
   </aside>

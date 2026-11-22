@@ -5,6 +5,7 @@
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -26,6 +27,7 @@ settings = load_settings()  # .env 를 먼저 읽은 뒤 auth 를 import (APP_PA
 from . import auth  # noqa: E402
 
 client: KisClient | DemoClient
+_bg_tasks: set = set()  # 백그라운드 작업 참조 유지 (GC 방지)
 
 
 @asynccontextmanager
@@ -33,6 +35,8 @@ async def lifespan(_: FastAPI):
     global client
     client = DemoClient() if settings.is_demo else KisClient(settings)
     log.info("모드: %s / 계좌: %s", settings.env, settings.masked_account)
+    if isinstance(client, KisClient):
+        _bg_tasks.add(asyncio.create_task(client.warmup()))
     yield
     await client.close()
 
@@ -96,7 +100,9 @@ async def status():
     labels = {"prod": "실전투자", "vps": "모의투자", "demo": "DEMO (가상)"}
     return {"env": settings.env, "env_label": labels[settings.env],
             "account": settings.masked_account, "stock_master_date": stock_master.as_of,
-            "auth": auth.enabled()}
+            "auth": auth.enabled(),
+            "credit": settings.env == "prod",  # 신용주문은 실전 계좌 전용
+            "poll_ms": 1000 if settings.env == "prod" else 3000}
 
 
 # ---------------------------------------------------------------------- 시세
@@ -133,8 +139,9 @@ async def balance():
 
 @app.get("/api/buyable/{code}")
 async def buyable(code: str = CODE, price: int = Query(0, ge=0),
-                  ord_dvsn: Literal["00", "01"] = "00"):
-    return await client.buyable(code, price, ord_dvsn)
+                  ord_dvsn: Literal["00", "01", "03"] = "00",
+                  credit: Literal["", "21", "23"] = ""):
+    return await client.buyable(code, price, ord_dvsn, credit)
 
 
 class OrderReq(BaseModel):
@@ -142,7 +149,10 @@ class OrderReq(BaseModel):
     code: str = Field(pattern=r"^[0-9A-Z]{6}$")
     qty: int = Field(gt=0, le=10_000_000)
     price: int = Field(0, ge=0)
-    ord_dvsn: Literal["00", "01"] = Field("00", description="00 지정가, 01 시장가")
+    ord_dvsn: Literal["00", "01", "03"] = Field("00", description="00 지정가, 01 시장가, 03 최유리지정가")
+    credit: Literal["", "21", "23", "25", "27"] = Field(
+        "", description="'' 현금, 21 자기융자신규, 23 유통융자신규 (매수) / 25 자기융자상환, 27 유통융자상환 (매도)")
+    loan_dt: str = Field("", pattern=r"^(\d{8})?$", description="신용 상환 매도 시 대출일자 YYYYMMDD")
 
     @model_validator(mode="after")
     def check_price(self):
@@ -153,14 +163,20 @@ class OrderReq(BaseModel):
                 raise ValueError(f"호가단위({tick_size(self.price):,}원)에 맞지 않는 가격입니다.")
         else:
             self.price = 0
+        if self.credit:
+            if self.side == "buy" and self.credit not in ("21", "23"):
+                raise ValueError("신용매수는 자기융자(21)/유통융자(23)만 가능합니다.")
+            if self.side == "sell" and (self.credit not in ("25", "27") or not self.loan_dt):
+                raise ValueError("신용상환 매도는 상환할 잔고(대출일자)를 선택해야 합니다.")
         return self
 
 
 @app.post("/api/order")
 async def order(req: OrderReq):
-    log.info("주문 요청: %s %s %d주 @%s (%s)", req.side, req.code, req.qty,
-             req.price or "시장가", req.ord_dvsn)
-    return await client.order(req.side, req.code, req.qty, req.price, req.ord_dvsn)
+    log.info("주문 요청: %s %s %d주 @%s (%s) 신용=%s", req.side, req.code, req.qty,
+             req.price or "시장가", req.ord_dvsn, req.credit or "-")
+    return await client.order(req.side, req.code, req.qty, req.price, req.ord_dvsn,
+                              req.credit, req.loan_dt)
 
 
 @app.get("/api/orders")

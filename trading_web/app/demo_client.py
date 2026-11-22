@@ -148,6 +148,7 @@ class DemoClient:
             eval_total += eval_amt
             holdings.append({
                 "code": code, "name": stock_master.name(code), "qty": h["qty"],
+                "trade_type": "현금", "loan_dt": "", "loan_amt": 0, "repay_type": "",
                 "sellable_qty": h["qty"] - self._locked_qty(code),
                 "avg_price": round(h["avg"], 2), "price": price, "buy_amount": buy_amt,
                 "eval_amount": eval_amt, "pnl": eval_amt - buy_amt,
@@ -161,14 +162,20 @@ class DemoClient:
             "pnl_rate": round(pnl / buy_total * 100, 2) if buy_total else 0.0,
         }, "holdings": holdings}
 
-    async def buyable(self, code: str, price: int, ord_dvsn: str) -> dict:
+    async def buyable(self, code: str, price: int, ord_dvsn: str, credit: str = "") -> dict:
+        if credit:
+            raise KisError("신용매수는 실전투자 계좌에서만 가능합니다 (DEMO 미지원).")
         s = self._sim(code)
         p = price if ord_dvsn == "00" and price > 0 else s.upper  # 시장가는 상한가 기준으로 계산
         cash = self.cash - self._locked_cash()
         qty = max(cash // p, 0)
-        return {"cash": cash, "max_qty": qty, "max_amount": qty * p, "calc_price": p}
+        return {"cash": cash, "max_qty": qty, "max_amount": qty * p,
+                "margin_max_qty": qty, "margin_max_amount": qty * p, "calc_price": p}
 
-    async def order(self, side: str, code: str, qty: int, price: int, ord_dvsn: str) -> dict:
+    async def order(self, side: str, code: str, qty: int, price: int, ord_dvsn: str,
+                    credit: str = "", loan_dt: str = "") -> dict:
+        if credit:
+            raise KisError("신용주문은 실전투자 계좌에서만 가능합니다 (DEMO 미지원).")
         s = self._sim(code)
         if ord_dvsn == "00":
             if not (s.lower <= price <= s.upper):
@@ -187,7 +194,8 @@ class DemoClient:
         self._orders.append({
             "order_no": no, "org_order_no": "", "org_no": "00950",
             "time": now_kst().strftime("%H%M%S"), "code": code, "name": stock_master.name(code),
-            "side": side, "type": "지정가" if ord_dvsn == "00" else "시장가", "market": ord_dvsn == "01",
+            "side": side, "type": {"00": "지정가", "01": "시장가", "03": "최유리지정가"}[ord_dvsn],
+            "market": ord_dvsn != "00",
             "qty": qty, "price": price if ord_dvsn == "00" else 0, "filled_qty": 0, "avg_price": 0,
             "remain_qty": qty, "cancelled": False, "cancellable": True,
         })
