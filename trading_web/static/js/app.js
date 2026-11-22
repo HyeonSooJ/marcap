@@ -91,9 +91,20 @@
     if (m >= 930 && m < 1200) return { text: "NXT 애프터마켓 (15:30~20:00) · NXT만 거래", nxtOnly: true };
     return { text: "장 마감", nxtOnly: false };
   }
+  let lastNxtOnly = null;
+  function autoSwitchToNxt() {
+    const si = sessionInfo();
+    const entered = si.nxtOnly && lastNxtOnly !== true;
+    lastNxtOnly = si.nxtOnly;
+    if (state.nxt && entered && state.excg === "KRX") {
+      setExcg("NXT");
+      toast("지금은 NXT 거래 시간이라 거래소를 NXT로 바꿨습니다. (KRX는 09:00~15:30)");
+    }
+  }
   function renderSession() {
     const el = $("#sessionHint");
     if (!el) return;
+    autoSwitchToNxt();
     const si = sessionInfo();
     el.textContent = si.text;
     el.classList.toggle("up", si.nxtOnly && state.excg === "KRX");
@@ -123,7 +134,7 @@
       state.fastApi = s.env !== "vps"; // 모의투자는 초당 2건 제한이라 미리 불러오기 생략
       state.nxt = !!s.nxt;
       $("#excgField").hidden = !s.nxt;
-      if (s.nxt) setExcg(state.excg, true);
+      if (s.nxt) { lastNxtOnly = null; setExcg(state.excg, true); autoSwitchToNxt(); }
       $("#acctTypeField").hidden = !s.credit;
       if (!s.credit && state.acct === "credit") setAcct("cash");
       if (s.env === "demo") toast("API 키가 없어 DEMO 모드로 실행 중입니다. 시세·주문은 가상입니다.");
@@ -259,11 +270,11 @@
     lastPrice = q.price;
     const arrow = q.sign > 0 ? "▲" : q.sign < 0 ? "▼" : "";
     $("#qChange").innerHTML = `<span class="${cls}">${arrow} ${fmt(q.change)} (${fmtRate(q.sign < 0 ? -Math.abs(q.change_rate) : q.change_rate)})</span>`;
-    $("#qTime").textContent = `${q.time} 기준`;
+    $("#qTime").textContent = q.volume ? `${q.time} 기준` : `${q.time} · 오늘 체결 없음 (전일 종가)`;
     $("#watchToggle").classList.toggle("on", state.watch.includes(q.code));
     $("#watchToggle").textContent = state.watch.includes(q.code) ? "★" : "☆";
 
-    const pc = (v) => `<span class="${signCls(v - q.base)}">${fmt(v)}</span>`;
+    const pc = (v) => (v ? `<span class="${signCls(v - q.base)}">${fmt(v)}</span>` : "-");
     const stats = [
       ["시가", pc(q.open)], ["고가", pc(q.high)], ["저가", pc(q.low)], ["기준가", fmt(q.base)],
       ["상한가", `<span class="up">${fmt(q.upper)}</span>`], ["하한가", `<span class="down">${fmt(q.lower)}</span>`],

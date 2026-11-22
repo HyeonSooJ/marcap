@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Path, Query, Request
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, model_validator
 
@@ -55,14 +55,34 @@ async def kis_error_handler(_: Request, exc: KisError):
     return JSONResponse(status_code=exc.status, content={"detail": exc.message, "code": exc.code})
 
 
+def _asset_version() -> str:
+    """정적 파일 내용으로 버전 문자열을 만들어, 배포할 때마다 브라우저 캐시를 무효화합니다."""
+    import hashlib
+    h = hashlib.sha1()
+    for f in sorted((BASE_DIR / "static").rglob("*")):
+        if f.is_file():
+            h.update(f.read_bytes())
+    return h.hexdigest()[:10]
+
+
+ASSET_VER = _asset_version()
+
+
+def _page(name: str) -> HTMLResponse:
+    html = (BASE_DIR / "static" / name).read_text(encoding="utf-8")
+    for asset in ("/static/css/style.css", "/static/js/app.js", "/static/js/login.js"):
+        html = html.replace(f'"{asset}"', f'"{asset}?v={ASSET_VER}"')
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, no-store, must-revalidate"})
+
+
 @app.get("/", include_in_schema=False)
 async def index():
-    return FileResponse(BASE_DIR / "static" / "index.html")
+    return _page("index.html")
 
 
 @app.get("/login", include_in_schema=False)
 async def login_page():
-    return FileResponse(BASE_DIR / "static" / "login.html")
+    return _page("login.html")
 
 
 class LoginReq(BaseModel):
