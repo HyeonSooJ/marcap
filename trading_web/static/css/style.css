@@ -252,6 +252,7 @@ dialog::backdrop { background: rgba(0, 0, 0, .45); }
 .check { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 13px; color: var(--muted); cursor: pointer; }
 .check input { width: 16px; height: 16px; accent-color: var(--accent); }
 .link-btn { border: 0; background: none; color: var(--accent); font-size: 12px; padding: 0 0 0 6px; text-decoration: underline; }
+.tag.nxt { color: #0c8599; background: rgba(21, 170, 191, .14); }
 .tag.credit { color: #b35c00; background: rgba(245, 159, 0, .15); }
 .warn.danger { color: var(--up); font-weight: 600; }
 .seg button:disabled, .stepper button:disabled { opacity: .4; cursor: default; }

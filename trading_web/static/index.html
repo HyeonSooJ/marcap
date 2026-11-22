@@ -126,6 +126,14 @@
         <button class="otab sell" data-side="sell">매도</button>
       </div>
       <form id="orderForm" autocomplete="off">
+        <div class="field" id="excgField" hidden>
+          <label>거래소 · <span id="sessionHint" class="small"></span></label>
+          <div class="seg full" id="excgSeg">
+            <button type="button" data-excg="KRX" class="active">KRX</button>
+            <button type="button" data-excg="NXT">NXT</button>
+            <button type="button" data-excg="SOR">통합(SOR)</button>
+          </div>
+        </div>
         <div class="field" id="acctTypeField" hidden>
           <label>거래구분</label>
           <div class="seg full" id="acctTypeSeg">

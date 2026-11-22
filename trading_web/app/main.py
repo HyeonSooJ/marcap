@@ -102,6 +102,7 @@ async def status():
             "account": settings.masked_account, "stock_master_date": stock_master.as_of,
             "auth": auth.enabled(),
             "credit": settings.env == "prod",  # 신용주문은 실전 계좌 전용
+            "nxt": settings.env == "prod",  # NXT·SOR 주문은 실전 계좌 전용
             "poll_ms": 1000 if settings.env == "prod" else 3000}
 
 
@@ -111,19 +112,22 @@ async def search(q: str = Query(..., min_length=1, max_length=30)):
     return stock_master.search(q)
 
 
+MARKET = Query("J", pattern="^(J|NX|UN)$", description="J=KRX, NX=NXT, UN=통합")
+
+
 @app.get("/api/quote/{code}")
-async def quote(code: str = CODE):
-    return await client.quote(code)
+async def quote(code: str = CODE, market: str = MARKET):
+    return await client.quote(code, market)
 
 
 @app.get("/api/orderbook/{code}")
-async def orderbook(code: str = CODE):
-    return await client.orderbook(code)
+async def orderbook(code: str = CODE, market: str = MARKET):
+    return await client.orderbook(code, market)
 
 
 @app.get("/api/chart/{code}")
-async def chart(code: str = CODE, period: Literal["D", "W", "M", "Y"] = "D"):
-    return await client.chart(code, period)
+async def chart(code: str = CODE, period: Literal["D", "W", "M", "Y"] = "D", market: str = MARKET):
+    return await client.chart(code, period, market)
 
 
 @app.get("/api/ranking/volume")
@@ -152,6 +156,7 @@ class OrderReq(BaseModel):
     ord_dvsn: Literal["00", "01", "03"] = Field("00", description="00 지정가, 01 시장가, 03 최유리지정가")
     credit: Literal["", "21", "23", "25", "27"] = Field(
         "", description="'' 현금, 21 자기융자신규, 23 유통융자신규 (매수) / 25 자기융자상환, 27 유통융자상환 (매도)")
+    excg: Literal["KRX", "NXT", "SOR"] = Field("KRX", description="KRX, NXT(넥스트레이드), SOR(최선집행)")
     loan_dt: str = Field("", pattern=r"^(\d{8})?$", description="신용 상환 매도 시 대출일자 YYYYMMDD")
 
     @model_validator(mode="after")
@@ -163,6 +168,8 @@ class OrderReq(BaseModel):
                 raise ValueError(f"호가단위({tick_size(self.price):,}원)에 맞지 않는 가격입니다.")
         else:
             self.price = 0
+        if self.excg == "NXT" and self.ord_dvsn == "01":
+            raise ValueError("NXT 는 시장가 주문이 없습니다. 지정가 또는 최유리를 사용하세요.")
         if self.credit:
             if self.side == "buy" and self.credit not in ("21", "23"):
                 raise ValueError("신용매수는 자기융자(21)/유통융자(23)만 가능합니다.")
@@ -173,10 +180,10 @@ class OrderReq(BaseModel):
 
 @app.post("/api/order")
 async def order(req: OrderReq):
-    log.info("주문 요청: %s %s %d주 @%s (%s) 신용=%s", req.side, req.code, req.qty,
-             req.price or "시장가", req.ord_dvsn, req.credit or "-")
+    log.info("주문 요청: %s %s %d주 @%s (%s) 신용=%s 거래소=%s", req.side, req.code, req.qty,
+             req.price or "시장가", req.ord_dvsn, req.credit or "-", req.excg)
     return await client.order(req.side, req.code, req.qty, req.price, req.ord_dvsn,
-                              req.credit, req.loan_dt)
+                              req.credit, req.loan_dt, req.excg)
 
 
 @app.get("/api/orders")
@@ -188,6 +195,7 @@ class ReviseReq(BaseModel):
     org_no: str = Field(max_length=10)
     order_no: str = Field(min_length=1, max_length=10)
     action: Literal["cancel", "amend"]
+    excg: Literal["KRX", "NXT", "SOR"] = "KRX"
     price: int = Field(0, ge=0)
 
 
@@ -196,4 +204,4 @@ async def revise(req: ReviseReq):
     if req.action == "amend" and (req.price <= 0 or req.price % tick_size(req.price)):
         raise HTTPException(422, "정정 가격이 올바르지 않습니다 (호가단위 확인).")
     log.info("정정/취소 요청: %s 주문번호 %s 가격 %s", req.action, req.order_no, req.price)
-    return await client.revise_cancel(req.org_no, req.order_no, req.action, req.price)
+    return await client.revise_cancel(req.org_no, req.order_no, req.action, req.price, req.excg)

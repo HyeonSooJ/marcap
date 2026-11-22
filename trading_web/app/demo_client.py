@@ -69,7 +69,7 @@ class DemoClient:
         return sim
 
     # ------------------------------------------------------------------ 시세
-    async def quote(self, code: str) -> dict:
+    async def quote(self, code: str, market: str = "J") -> dict:
         s = self._sim(code)
         st = stock_master.get(code)
         change = s.price - s.prev_close
@@ -86,7 +86,7 @@ class DemoClient:
             "time": now_kst().strftime("%H:%M:%S"),
         }
 
-    async def orderbook(self, code: str) -> dict:
+    async def orderbook(self, code: str, market: str = "J") -> dict:
         s = self._sim(code)
         t = tick_size(s.price)
         rnd = random.Random(f"{code}{int(time.time())}")
@@ -97,7 +97,7 @@ class DemoClient:
                 "price": s.price, "base": s.prev_close, "expected_price": 0,
                 "time": now_kst().strftime("%H%M%S")}
 
-    async def chart(self, code: str, period: str = "D") -> list[dict]:
+    async def chart(self, code: str, period: str = "D", market: str = "J") -> list[dict]:
         s = self._sim(code)
         rnd = random.Random(code + period)
         step = {"D": 1, "W": 7, "M": 30, "Y": 365}[period]
@@ -173,7 +173,7 @@ class DemoClient:
                 "margin_max_qty": qty, "margin_max_amount": qty * p, "calc_price": p}
 
     async def order(self, side: str, code: str, qty: int, price: int, ord_dvsn: str,
-                    credit: str = "", loan_dt: str = "") -> dict:
+                    credit: str = "", loan_dt: str = "", excg: str = "KRX") -> dict:
         if credit:
             raise KisError("신용주문은 실전투자 계좌에서만 가능합니다 (DEMO 미지원).")
         s = self._sim(code)
@@ -197,7 +197,7 @@ class DemoClient:
             "side": side, "type": {"00": "지정가", "01": "시장가", "03": "최유리지정가"}[ord_dvsn],
             "market": ord_dvsn != "00",
             "qty": qty, "price": price if ord_dvsn == "00" else 0, "filled_qty": 0, "avg_price": 0,
-            "remain_qty": qty, "cancelled": False, "cancellable": True,
+            "remain_qty": qty, "cancelled": False, "cancellable": True, "excg": "KRX",
         })
         self._match(code, s.price)
         return {"order_no": no, "org_no": "00950", "time": now_kst().strftime("%H%M%S"),
@@ -233,7 +233,8 @@ class DemoClient:
             self._sim(code)
         return [{k: v for k, v in o.items() if k != "market"} for o in reversed(self._orders)]
 
-    async def revise_cancel(self, org_no: str, order_no: str, action: str, price: int = 0) -> dict:
+    async def revise_cancel(self, org_no: str, order_no: str, action: str, price: int = 0,
+                            excg: str = "KRX") -> dict:
         o = next((x for x in self._orders if x["order_no"] == order_no), None)
         if not o or not o["cancellable"]:
             raise KisError("정정/취소 가능한 주문이 아닙니다.")

@@ -203,10 +203,20 @@ class KisClient:
         return data, dict(r.headers)
 
     # ------------------------------------------------------------------ 시세
-    async def quote(self, code: str) -> dict:
+    def _mkt(self, market: str) -> str:
+        """시세 시장구분: J=KRX, NX=NXT(넥스트레이드), UN=통합. 모의투자는 KRX만 지원."""
+        return "J" if self.s.env == "vps" else market
+
+    def _excg(self, excg: str) -> str:
+        """주문 거래소: KRX / NXT / SOR(최선집행). 모의투자는 KRX만 지원."""
+        if self.s.env == "vps" and excg != "KRX":
+            raise KisError("모의투자는 KRX 주문만 가능합니다 (NXT·SOR 미지원).")
+        return excg
+
+    async def quote(self, code: str, market: str = "J") -> dict:
         data, _ = await self._request(
             "GET", "/uapi/domestic-stock/v1/quotations/inquire-price", "FHKST01010100",
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code})
+            params={"FID_COND_MRKT_DIV_CODE": self._mkt(market), "FID_INPUT_ISCD": code})
         o = data["output"]
         price = to_int(o.get("stck_prpr"))
         sign = SIGN_MAP.get(o.get("prdy_vrss_sign", "3"), 0)
@@ -239,11 +249,13 @@ class KisClient:
             "time": now_kst().strftime("%H:%M:%S"),
         }
 
-    async def orderbook(self, code: str) -> dict:
+    async def orderbook(self, code: str, market: str = "J") -> dict:
         data, _ = await self._request(
             "GET", "/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn", "FHKST01010200",
-            params={"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": code})
-        o1, o2 = data.get("output1", {}), data.get("output2", {})
+            params={"FID_COND_MRKT_DIV_CODE": self._mkt(market), "FID_INPUT_ISCD": code})
+        def first(v):  # 단건(object) 또는 배열로 내려와도 처리
+            return (v[0] if v else {}) if isinstance(v, list) else (v or {})
+        o1, o2 = first(data.get("output1")), first(data.get("output2"))
         asks = [{"price": to_int(o1.get(f"askp{i}")), "qty": to_int(o1.get(f"askp_rsqn{i}"))} for i in range(1, 11)]
         bids = [{"price": to_int(o1.get(f"bidp{i}")), "qty": to_int(o1.get(f"bidp_rsqn{i}"))} for i in range(1, 11)]
         return {
@@ -258,24 +270,25 @@ class KisClient:
             "time": o1.get("aspr_acpt_hour", ""),
         }
 
-    async def chart(self, code: str, period: str = "D") -> list[dict]:
+    async def chart(self, code: str, period: str = "D", market: str = "J") -> list[dict]:
+        market = self._mkt(market)
         # 과거 봉은 바뀌지 않으므로 잠깐 캐시 (오늘 봉은 화면에서 현재가로 갱신)
-        cached = self._chart_cache.get((code, period))
+        cached = self._chart_cache.get((code, period, market))
         if cached and time.monotonic() - cached[0] < 120:
             return cached[1]
-        rows = await self._chart(code, period)
+        rows = await self._chart(code, period, market)
         if len(self._chart_cache) > 300:
             self._chart_cache.clear()
-        self._chart_cache[(code, period)] = (time.monotonic(), rows)
+        self._chart_cache[(code, period, market)] = (time.monotonic(), rows)
         return rows
 
-    async def _chart(self, code: str, period: str) -> list[dict]:
+    async def _chart(self, code: str, period: str, market: str) -> list[dict]:
         end = now_kst()
         span = {"D": 150, "W": 7 * 100, "M": 31 * 100, "Y": 366 * 30}[period]
         data, _ = await self._request(
             "GET", "/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice", "FHKST03010100",
             params={
-                "FID_COND_MRKT_DIV_CODE": "J",
+                "FID_COND_MRKT_DIV_CODE": market,
                 "FID_INPUT_ISCD": code,
                 "FID_INPUT_DATE_1": (end - timedelta(days=span)).strftime("%Y%m%d"),
                 "FID_INPUT_DATE_2": end.strftime("%Y%m%d"),
@@ -416,7 +429,7 @@ class KisClient:
         }
 
     async def order(self, side: str, code: str, qty: int, price: int, ord_dvsn: str,
-                    credit: str = "", loan_dt: str = "") -> dict:
+                    credit: str = "", loan_dt: str = "", excg: str = "KRX") -> dict:
         """credit: '' 현금주문(미수 매수 포함) / 매수 '21' 자기융자신규 '23' 유통융자신규
         / 매도 '25' 자기융자상환 '27' 유통융자상환 (loan_dt = 상환할 잔고의 대출일자)."""
         unpr = str(price if ord_dvsn == "00" else 0)
@@ -425,11 +438,11 @@ class KisClient:
             body = {**self._acct(), "PDNO": code, "SLL_TYPE": "", "CRDT_TYPE": credit,
                     "LOAN_DT": now_kst().strftime("%Y%m%d") if side == "buy" else loan_dt,
                     "ORD_DVSN": ord_dvsn, "ORD_QTY": str(qty), "ORD_UNPR": unpr,
-                    "RSVN_ORD_YN": "N", "EXCG_ID_DVSN_CD": "KRX"}
+                    "RSVN_ORD_YN": "N", "EXCG_ID_DVSN_CD": self._excg(excg)}
             tr_id, path = ("TTTC0052U" if side == "buy" else "TTTC0051U"), "order-credit"
         else:
             body = {**self._acct(), "PDNO": code, "ORD_DVSN": ord_dvsn, "ORD_QTY": str(qty),
-                    "ORD_UNPR": unpr, "EXCG_ID_DVSN_CD": "KRX"}
+                    "ORD_UNPR": unpr, "EXCG_ID_DVSN_CD": self._excg(excg)}
             if side == "sell":
                 body["SLL_TYPE"] = "01"
             tr_id, path = self._tr("TTTC0012U" if side == "buy" else "TTTC0011U"), "order-cash"
@@ -478,19 +491,21 @@ class KisClient:
                     "remain_qty": remain,
                     "cancelled": cancelled,
                     "cancellable": remain > 0 and not cancelled and to_int(o.get("rjct_qty")) == 0,
+                    "excg": (o.get("excg_id_dvsn_Cd") or o.get("excg_id_dvsn_cd") or "KRX").strip() or "KRX",
                 })
             if headers.get("tr_cont") not in ("M", "F"):
                 break
             fk, nk, tr_cont = data.get("ctx_area_fk100", ""), data.get("ctx_area_nk100", ""), "N"
         return out
 
-    async def revise_cancel(self, org_no: str, order_no: str, action: str, price: int = 0) -> dict:
+    async def revise_cancel(self, org_no: str, order_no: str, action: str, price: int = 0,
+                            excg: str = "KRX") -> dict:
         """action: cancel(취소) | amend(정정, 잔량 전부를 새 지정가로)."""
         body = {**self._acct(),
                 "KRX_FWDG_ORD_ORGNO": org_no, "ORGN_ODNO": order_no, "ORD_DVSN": "00",
                 "RVSE_CNCL_DVSN_CD": "02" if action == "cancel" else "01",
                 "ORD_QTY": "0", "ORD_UNPR": str(price if action == "amend" else 0),
-                "QTY_ALL_ORD_YN": "Y", "EXCG_ID_DVSN_CD": "KRX"}
+                "QTY_ALL_ORD_YN": "Y", "EXCG_ID_DVSN_CD": self._excg(excg)}
         data, _ = await self._request(
             "POST", "/uapi/domestic-stock/v1/trading/order-rvsecncl", self._tr("TTTC0013U"), body=body,
             priority=True)

@@ -72,6 +72,33 @@
     priceTouched: false,
   };
 
+  // ------------------------------------------------------------------ 거래소 (KRX / NXT / SOR)
+  state.nxt = false;                      // 실전 계좌에서만 NXT·SOR 사용
+  state.excg = store.get("excg", "KRX");
+  const MARKET_OF = { KRX: "J", NXT: "NX", SOR: "UN" };   // 시세 조회 시장구분
+  const EXCG_LABEL = { KRX: "KRX", NXT: "NXT", SOR: "통합(SOR)" };
+  const mkt = () => (state.nxt ? MARKET_OF[state.excg] : "J");
+
+  // 현재 거래 세션 (한국시간 기준)
+  function sessionInfo() {
+    const now = new Date(Date.now() + 9 * 3600e3);
+    const day = now.getUTCDay(), m = now.getUTCHours() * 60 + now.getUTCMinutes();
+    if (day === 0 || day === 6) return { text: "주말 휴장", nxtOnly: false };
+    if (m >= 480 && m < 530) return { text: "NXT 프리마켓 (08:00~08:50) · NXT만 거래", nxtOnly: true };
+    if (m >= 530 && m < 540) return { text: "KRX 장전 동시호가", nxtOnly: false };
+    if (m >= 540 && m < 920) return { text: "정규장 · KRX·NXT 모두 거래", nxtOnly: false };
+    if (m >= 920 && m < 930) return { text: "KRX 종가 동시호가 (NXT 휴장)", nxtOnly: false };
+    if (m >= 930 && m < 1200) return { text: "NXT 애프터마켓 (15:30~20:00) · NXT만 거래", nxtOnly: true };
+    return { text: "장 마감", nxtOnly: false };
+  }
+  function renderSession() {
+    const el = $("#sessionHint");
+    if (!el) return;
+    const si = sessionInfo();
+    el.textContent = si.text;
+    el.classList.toggle("up", si.nxtOnly && state.excg === "KRX");
+  }
+
   // ------------------------------------------------------------------ 테마
   const savedTheme = store.get("theme", null);
   if (savedTheme) document.documentElement.dataset.theme = savedTheme;
@@ -94,6 +121,9 @@
       $("#logoutBtn").hidden = !s.auth;
       state.pollMs = s.poll_ms || 3000;
       state.fastApi = s.env !== "vps"; // 모의투자는 초당 2건 제한이라 미리 불러오기 생략
+      state.nxt = !!s.nxt;
+      $("#excgField").hidden = !s.nxt;
+      if (s.nxt) setExcg(state.excg, true);
       $("#acctTypeField").hidden = !s.credit;
       if (!s.credit && state.acct === "credit") setAcct("cash");
       if (s.env === "demo") toast("API 키가 없어 DEMO 모드로 실행 중입니다. 시세·주문은 가상입니다.");
@@ -189,7 +219,7 @@
   async function refreshQuote(first = false) {
     const code = state.code;
     try {
-      const pq = api(`/api/quote/${code}`).then((q) => {
+      const pq = api(`/api/quote/${code}?market=${mkt()}`).then((q) => {
         if (code !== state.code) return; // 그 사이 종목이 바뀜
         state.quote = q;
         renderQuote(q, first);
@@ -198,7 +228,7 @@
         renderWatch();
         updateLastCandle(q);
       });
-      const pb = api(`/api/orderbook/${code}`).then((book) => {
+      const pb = api(`/api/orderbook/${code}?market=${mkt()}`).then((book) => {
         if (code !== state.code) return;
         state.book = book;
         renderBook(book);
@@ -219,7 +249,7 @@
     const cls = signCls(q.sign);
     $("#qName").textContent = q.name;
     $("#qCode").textContent = q.code;
-    $("#qMarket").textContent = q.market || "";
+    $("#qMarket").textContent = [q.market, state.nxt ? EXCG_LABEL[state.excg] : ""].filter(Boolean).join(" · ");
     const priceEl = $("#qPrice");
     priceEl.textContent = fmt(q.price);
     priceEl.className = `big ${cls}`;
@@ -302,22 +332,22 @@
   const prefetching = new Set();
   let chartLoading = false;
   function prefetchChart(code) {
-    const key = `${code}:${state.period}`;
+    const key = `${code}:${state.period}:${mkt()}`;
     if (!state.fastApi || chartCache.has(key) || prefetching.has(key)) return;
     prefetching.add(key);
-    api(`/api/chart/${code}?period=${state.period}`)
+    api(`/api/chart/${code}?period=${state.period}&market=${mkt()}`)
       .then((rows) => chartCache.set(key, { t: Date.now(), rows }))
       .catch(() => {})
       .finally(() => prefetching.delete(key));
   }
   async function loadChart() {
-    const code = state.code, period = state.period, key = `${code}:${period}`;
+    const code = state.code, period = state.period, market = mkt(), key = `${code}:${period}:${market}`;
     const hit = chartCache.get(key);
     if (hit) { state.chart = hit.rows.map((r) => ({ ...r })); drawChart(); }
     else { state.chart = []; chartLoading = true; drawChart(); }
     if (hit && Date.now() - hit.t < 60000) return;
     try {
-      const rows = await api(`/api/chart/${code}?period=${period}`);
+      const rows = await api(`/api/chart/${code}?period=${period}&market=${market}`);
       chartLoading = false;
       chartCache.set(key, { t: Date.now(), rows });
       if (code !== state.code || period !== state.period) return;
@@ -505,7 +535,7 @@
     for (const code of state.watch) {
       if (code === state.code || document.hidden) continue;
       try {
-        const q = await api(`/api/quote/${code}`);
+        const q = await api(`/api/quote/${code}?market=${mkt()}`);
         state.watchQuotes[code] = { price: q.price, rate: q.change_rate, sign: q.sign, name: q.name };
       } catch { /* 개별 실패 무시 */ }
     }
@@ -599,6 +629,23 @@
     syncOrderUi();
     refreshBuyable();
   }
+  function setExcg(x, reload = true) {
+    if (!EXCG_LABEL[x]) x = "KRX";
+    state.excg = x;
+    store.set("excg", x);
+    $$("#excgSeg button").forEach((b) => b.classList.toggle("active", b.dataset.excg === x));
+    // NXT 는 시장가 주문이 없음
+    const mktBtn = $('#ordTypeSeg button[data-type="01"]');
+    mktBtn.disabled = x === "NXT";
+    if (x === "NXT" && state.ordType === "01") setOrdType("00");
+    renderSession();
+    if (reload) { refreshQuote(true); loadChart(); }
+  }
+  $("#excgSeg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-excg]");
+    if (b) setExcg(b.dataset.excg);
+  });
+
   function setOrdType(t) {
     state.ordType = t;
     $$("#ordTypeSeg button").forEach((b) => b.classList.toggle("active", b.dataset.type === t));
@@ -798,6 +845,7 @@
           <dt>종목</dt><dd>${esc(q.name)} (${esc(q.code)})</dd>
           <dt>구분</dt><dd class="${state.side === "buy" ? "up" : "down"}">${sideLabel}</dd>
           ${credit ? `<dt>신용유형</dt><dd>${CREDIT_LABEL[creditCode]}${loanDt ? ` (${fmtDate(loanDt)})` : ""}</dd>` : ""}
+          ${state.nxt ? `<dt>거래소</dt><dd>${EXCG_LABEL[state.excg]}</dd>` : ""}
           <dt>주문유형</dt><dd>${ORD_TYPE_LABEL[state.ordType]}</dd>
           <dt>가격</dt><dd>${state.ordType === "00" ? `${fmt(price)}원` : ORD_TYPE_LABEL[state.ordType]}</dd>
           <dt>수량</dt><dd>${fmt(qty)}주</dd>
@@ -814,7 +862,8 @@
     const t0 = performance.now();
     try {
       const r = await api("/api/order", { method: "POST", body: {
-        side: state.side, code: q.code, qty, price, ord_dvsn: state.ordType, credit: creditCode, loan_dt: loanDt } });
+        side: state.side, code: q.code, qty, price, ord_dvsn: state.ordType, credit: creditCode, loan_dt: loanDt,
+        excg: state.nxt ? state.excg : "KRX" } });
       const ms = Math.round(performance.now() - t0);
       toast(`${sideLabel} 주문 접수 (${ms}ms) · 주문번호 ${r.order_no}${r.message ? ` · ${r.message}` : ""}`, "ok");
       loadOrders();
@@ -868,14 +917,14 @@
           <td>${fmtTime(o.time)}</td>
           <td class="link" data-code="${esc(o.code)}"><b>${esc(o.name)}</b></td>
           <td><span class="tag ${o.side}">${o.side === "buy" ? "매수" : "매도"}</span></td>
-          <td>${esc(o.type)}</td>
+          <td>${esc(o.type)}${o.excg && o.excg !== "KRX" ? ` <span class="tag nxt">${esc(o.excg)}</span>` : ""}</td>
           <td class="r">${o.price ? fmt(o.price) : "-"}</td>
           <td class="r">${fmt(o.qty)}</td><td class="r">${fmt(o.filled_qty)}</td>
           <td class="r">${o.avg_price ? fmt(o.avg_price) : "-"}</td><td class="r">${fmt(o.remain_qty)}</td>
           <td>${status}</td>
           <td>${o.cancellable ? `<div class="act">
-              <button class="ghost" data-amend="${esc(o.order_no)}" data-org="${esc(o.org_no)}" data-price="${o.price}">정정</button>
-              <button class="ghost" data-cancel="${esc(o.order_no)}" data-org="${esc(o.org_no)}">취소</button></div>` : ""}</td>
+              <button class="ghost" data-amend="${esc(o.order_no)}" data-org="${esc(o.org_no)}" data-excg="${esc(o.excg || "KRX")}" data-price="${o.price}">정정</button>
+              <button class="ghost" data-cancel="${esc(o.order_no)}" data-org="${esc(o.org_no)}" data-excg="${esc(o.excg || "KRX")}">취소</button></div>` : ""}</td>
         </tr>`;
       }).join("") : `<tr><td colspan="11" class="empty">오늘 주문 내역이 없습니다</td></tr>`;
     } catch (e) {
@@ -891,7 +940,7 @@
       const ok = await confirmModal("주문 취소", `<p>주문번호 <b>${esc(cancel.dataset.cancel)}</b> 의 미체결 잔량을 전부 취소합니다.</p>`, "주문 취소");
       if (!ok) return;
       try {
-        const r = await api("/api/order/revise", { method: "POST", body: { org_no: cancel.dataset.org, order_no: cancel.dataset.cancel, action: "cancel" } });
+        const r = await api("/api/order/revise", { method: "POST", body: { org_no: cancel.dataset.org, order_no: cancel.dataset.cancel, action: "cancel", excg: cancel.dataset.excg } });
         toast(r.message || "취소 주문 완료", "ok");
       } catch (err) { toast(`취소 실패: ${err.message}`, "error"); }
       setTimeout(() => { loadOrders(); loadBalance(true); }, 500);
@@ -902,7 +951,7 @@
       const price = toNum(v);
       if (!price || price % tickSize(price)) { toast("호가단위에 맞는 가격을 입력하세요.", "error"); return; }
       try {
-        const r = await api("/api/order/revise", { method: "POST", body: { org_no: amend.dataset.org, order_no: amend.dataset.amend, action: "amend", price } });
+        const r = await api("/api/order/revise", { method: "POST", body: { org_no: amend.dataset.org, order_no: amend.dataset.amend, action: "amend", price, excg: amend.dataset.excg } });
         toast(r.message || "정정 주문 완료", "ok");
       } catch (err) { toast(`정정 실패: ${err.message}`, "error"); }
       setTimeout(() => { loadOrders(); loadBalance(true); }, 500);
@@ -944,6 +993,8 @@
 
   // ------------------------------------------------------------------ 시작
   loadStatus();
+  renderSession();
+  setInterval(renderSession, 30000);
   renderWatch();
   syncOrderUi();
   selectStock(state.code);
